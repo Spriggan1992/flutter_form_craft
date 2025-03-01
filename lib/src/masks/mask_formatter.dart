@@ -1,6 +1,7 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+
 part 'utils.dart';
 
 class _Separator {
@@ -13,8 +14,7 @@ class _Separator {
 }
 
 class MaskedInputFormatter extends TextInputFormatter {
-  final String mask;
-
+  String _mask; // Маска (теперь может изменяться)
   final String _anyCharMask = 'x';
   final String _onlyDigitMask = '0';
   final RegExp? allowedCharMatcher;
@@ -36,14 +36,24 @@ class MaskedInputFormatter extends TextInputFormatter {
   /// match only lowercase latin characters and everything else will be
   /// ignored
   MaskedInputFormatter(
-    this.mask, {
+    String mask, {
     this.allowedCharMatcher,
-  });
+  }) : _mask = mask {
+    _prepareMask();
+  }
 
-  bool get isFilled => _maskedValue.length == mask.length;
+  /// Метод для обновления маски
+  void updateMask(String newMask) {
+    _mask = newMask;
+    _separators.clear(); // Очищаем старые разделители
+    _prepareMask(); // Подготавливаем новую маску
+    _maskedValue =
+        applyMask(_maskedValue).text; // Переформатируем текущий текст
+  }
+
+  bool get isFilled => _maskedValue.length == _mask.length;
 
   String get unmaskedValue {
-    _prepareMask();
     final stringBuffer = StringBuffer();
     for (var i = 0; i < _maskedValue.length; i++) {
       var char = _maskedValue[i];
@@ -52,6 +62,15 @@ class MaskedInputFormatter extends TextInputFormatter {
       }
     }
     return stringBuffer.toString();
+  }
+
+  bool isDigit(String character, {bool positiveOnly = true}) {
+    if (character.isEmpty) return false;
+    final codeUnit = character.codeUnitAt(0);
+    if (positiveOnly) {
+      return codeUnit >= 48 && codeUnit <= 57;
+    }
+    return (codeUnit >= 48 && codeUnit <= 57) || character == '-';
   }
 
   @override
@@ -107,8 +126,8 @@ class MaskedInputFormatter extends TextInputFormatter {
 
   void _prepareMask() {
     if (_separators.isEmpty) {
-      for (var i = 0; i < mask.length; i++) {
-        final separatorChar = mask[i];
+      for (var i = 0; i < _mask.length; i++) {
+        final separatorChar = _mask[i];
         if (separatorChar != _anyCharMask && separatorChar != _onlyDigitMask) {
           _separators.add(
             _Separator(
@@ -122,7 +141,6 @@ class MaskedInputFormatter extends TextInputFormatter {
   }
 
   int _countSeparators(String text) {
-    _prepareMask();
     var numSeparators = 0;
     for (var i = 0; i < text.length; i++) {
       final char = text[i];
@@ -152,13 +170,12 @@ class MaskedInputFormatter extends TextInputFormatter {
   }
 
   FormattedValue applyMask(String text) {
-    _prepareMask();
     String clearedValueAfter = _removeSeparators(text);
     final isErasing = _maskedValue.length > text.length;
     FormattedValue formattedValue = FormattedValue();
     StringBuffer stringBuffer = StringBuffer();
     var index = 0;
-    final splitMask = mask.split('');
+    final splitMask = _mask.split('');
     final placeholder = List.filled(
       splitMask.length,
       '',

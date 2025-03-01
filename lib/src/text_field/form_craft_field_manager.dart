@@ -82,16 +82,6 @@ base class FormCraftFieldManager {
     return textFieldWidget;
   }
 
-  void _changeTextEditingControllerToMaskedTextController(
-    String key,
-    PersistentMask mask,
-  ) {
-    var formController = controllers[key];
-    final textValue = formController?.controller.text;
-    formController?._controller = MaskedTextController(mask)
-      ..text = textValue ?? '';
-  }
-
   /// Reassigns the input value for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.

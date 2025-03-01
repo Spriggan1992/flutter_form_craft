@@ -194,7 +194,8 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     _customErrorMessage = widget.customErrorMessage;
     _focusNode = widget.formController.focusNode;
     if (widget.mask != null) {
-      widget.formController.setController(MaskedTextController(widget.mask!));
+      widget.formController
+          .setController(MaskedTextController(initialMask: widget.mask!));
     }
     _controller = widget.formController.controller;
 

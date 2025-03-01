@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
+import 'package:flutter_form_craft/src/masks/mask_type.dart';
 
 import 'dart:ui' as ui;
 

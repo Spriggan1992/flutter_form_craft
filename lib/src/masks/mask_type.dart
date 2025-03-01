@@ -1,0 +1,4 @@
+enum MaskType {
+  phone,
+  custom,
+}
