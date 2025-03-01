@@ -194,8 +194,9 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     _customErrorMessage = widget.customErrorMessage;
     _focusNode = widget.formController.focusNode;
     if (widget.mask != null) {
-      widget.formController
-          .setController(MaskedTextController(initialMask: widget.mask!));
+      widget.formController.setController(MaskedTextController(
+        initialMask: widget.mask!,
+      ));
     }
     _controller = widget.formController.controller;
 
@@ -337,7 +338,9 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       onSubmitted: widget.onSubmitted,
       onAppPrivateCommand: widget.onAppPrivateCommand,
       inputFormatters: [
-        if (widget.mask != null) MaskedInputFormatter(widget.mask!.maskPattern),
+        if (widget.mask != null)
+          MaskedInputFormatter(widget.mask!.maskPattern,
+              initialValue: widget.initialValue ?? ''),
         ...widget.inputFormatters ?? []
       ],
       enabled: widget.enabled,

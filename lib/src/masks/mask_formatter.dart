@@ -38,8 +38,13 @@ class MaskedInputFormatter extends TextInputFormatter {
   MaskedInputFormatter(
     String mask, {
     this.allowedCharMatcher,
+    String initialValue = '',
   }) : _mask = mask {
     _prepareMask();
+    if (initialValue.isNotEmpty) {
+      _maskedValue =
+          applyMask(initialValue).text; // Форматируем начальное значение
+    }
   }
 
   /// Метод для обновления маски
