@@ -32,7 +32,7 @@ class PersistentMask {
         validator: FormCraftValidator.custom(
           message: message,
           predicate: (input) {
-            return input! == maskPattern;
+            return input!.length == maskPattern.length;
           },
         ),
       );
