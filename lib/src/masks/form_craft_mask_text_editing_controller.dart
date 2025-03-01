@@ -1,17 +1,19 @@
 part of '../form_craft.dart';
 
 class MaskedTextController extends TextEditingController {
-  PersistentMask _mask;
   final RegExp _digitRegExp = RegExp(r'[0-9]');
+  PersistentMask _mask;
 
   MaskedTextController({
     required PersistentMask initialMask,
-  }) : _mask = initialMask;
+  }) : _mask = initialMask {
+    updateText(text);
+  }
 
   // Метод для обновления маски
   void updateMask(PersistentMask newMask) {
     _mask = newMask;
-    updateText(text); // Обновляем текст с новой маской
+    updateText(text);
   }
 
   @override
