@@ -3,7 +3,7 @@ import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
 import 'package:collection/collection.dart';
 
 class MaskedPhoneInputFormatter extends TextInputFormatter {
-  final String mask; // Маска (теперь может изменяться)
+  final String mask; // Маска
   final String _anyCharMask = 'x';
   final String _onlyDigitMask = '0';
   final RegExp? allowedCharMatcher;
@@ -44,15 +44,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     return stringBuffer.toString();
   }
 
-  bool isDigit(String character, {bool positiveOnly = true}) {
-    if (character.isEmpty) return false;
-    final codeUnit = character.codeUnitAt(0);
-    if (positiveOnly) {
-      return codeUnit >= 48 && codeUnit <= 57;
-    }
-    return (codeUnit >= 48 && codeUnit <= 57) || character == '-';
-  }
-
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -64,17 +55,17 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     }
 
     // Определяем, был ли ввод или удаление
-    bool isInserting = newValue.text.length > oldValue.text.length;
+    final isInserting = newValue.text.length > oldValue.text.length;
 
     // Применяем маску к новому значению
-    final FormattedValue newFormattedValue = applyMask(newValue.text);
-    _maskedValue = newFormattedValue.text;
+    final formattedValue = applyMask(newValue.text);
+    _maskedValue = formattedValue.text;
 
     // Вычисляем новую позицию курсора
     int cursorPosition = newValue.selection.end;
 
     if (isInserting) {
-      // Если пользователь вводит символ, перемещаем курсор вперед, пропуская разделители
+      // Если пользователь вводит символ, перемещаем курсор вперёд, пропуская разделители
       while (cursorPosition < _maskedValue.length &&
           _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
         cursorPosition++;
@@ -87,25 +78,18 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       }
     }
 
-    // Ограничиваем позицию курсора длиной отформатированного текста
-    if (cursorPosition > _maskedValue.length) {
-      cursorPosition = _maskedValue.length;
+    // Если курсор перешёл в начало, вернуть его на место после фиксированного префикса
+    if (cursorPosition < _fixedPrefix.length) {
+      cursorPosition = _fixedPrefix.length;
     }
+
+    // Ограничиваем позицию курсора длиной отформатированного текста
+    cursorPosition = cursorPosition.clamp(0, _maskedValue.length);
 
     return TextEditingValue(
       text: _maskedValue,
-      selection: TextSelection.collapsed(
-        offset: cursorPosition,
-        affinity: TextAffinity.upstream,
-      ),
+      selection: TextSelection.collapsed(offset: cursorPosition),
     );
-  }
-
-  bool _isMatchingRestrictor(String character) {
-    if (allowedCharMatcher == null) {
-      return true;
-    }
-    return allowedCharMatcher!.stringMatch(character) != null;
   }
 
   void _prepareMask() {
@@ -122,18 +106,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
         }
       }
     }
-  }
-
-  int _countSeparators(String text) {
-    var numSeparators = 0;
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-
-      if (_separators.any((s) => s.value == char)) {
-        numSeparators++;
-      }
-    }
-    return numSeparators;
   }
 
   String _removeSeparators(String text) {
@@ -154,68 +126,63 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }
 
   FormattedValue applyMask(String text) {
-    String clearedValueAfter = _removeSeparators(text);
-    final isErasing = _maskedValue.length > text.length;
-    FormattedValue formattedValue = FormattedValue();
-    StringBuffer stringBuffer = StringBuffer();
+    final clearedValue = _removeSeparators(text);
+    final formattedValue = FormattedValue();
+    final stringBuffer = StringBuffer();
 
     // Добавляем фиксированную часть маски
     stringBuffer.write(_fixedPrefix);
 
     var index = 0;
-    final splitMask = mask.split('');
-    final placeholder = List.filled(splitMask.length, '', growable: false);
-    var lastRealCharIndex = 0;
-
-    // Начинаем ввод с места после фиксированной части маски
-    for (var i = _fixedPrefix.length; i < splitMask.length; i++) {
+    for (var i = _fixedPrefix.length; i < mask.length; i++) {
       final separator = _getSeparatorForIndex(i);
       if (separator == null) {
-        if (clearedValueAfter.length > index) {
-          final maskOnDigitMatcher = splitMask[i] == _onlyDigitMask;
-          var curChar = clearedValueAfter[index];
-          if (maskOnDigitMatcher) {
-            if (!isDigit(curChar, positiveOnly: true)) {
-              break;
-            }
-          } else {
-            if (!_isMatchingRestrictor(curChar)) {
-              break;
-            }
+        if (index < clearedValue.length) {
+          final curChar = clearedValue[index];
+          final isDigitMask = mask[i] == _onlyDigitMask;
+
+          if (isDigitMask && !isDigit(curChar)) {
+            break;
           }
-          placeholder[i] = curChar;
-          lastRealCharIndex = i + 1;
+
+          if (!isDigitMask &&
+              allowedCharMatcher != null &&
+              !allowedCharMatcher!.hasMatch(curChar)) {
+            break;
+          }
+
+          stringBuffer.write(curChar);
           index++;
         } else {
           break;
         }
       } else {
-        placeholder[i] = separator.value;
+        stringBuffer.write(separator.value);
       }
     }
 
-    for (var i = 0; i < lastRealCharIndex; i++) {
-      stringBuffer.write(placeholder[i]);
-    }
-    formattedValue._isErasing = isErasing;
     formattedValue._formattedValue = stringBuffer.toString();
-
     return formattedValue;
   }
+
+  bool isDigit(String character) {
+    if (character.isEmpty) return false;
+    final codeUnit = character.codeUnitAt(0);
+    return codeUnit >= 48 && codeUnit <= 57;
+  }
+}
+
+class Separator {
+  final String value;
+  final int indexInMask;
+
+  Separator({required this.value, required this.indexInMask});
 }
 
 class FormattedValue {
   String _formattedValue = '';
-  bool _isErasing = false;
-  int _numLeadingSymbols = 0;
 
-  String get text {
-    return _formattedValue;
-  }
-
-  void increaseNumberOfLeadingSymbols() {
-    _numLeadingSymbols++;
-  }
+  String get text => _formattedValue;
 
   @override
   String toString() {
