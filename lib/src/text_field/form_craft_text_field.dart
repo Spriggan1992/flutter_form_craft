@@ -207,7 +207,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
             MaskType.custom => value,
             MaskType.phone => MaskedPhoneInputFormatter(
                 widget.mask!.maskPattern,
-                fixedPrefix: '+7 ',
+                fixedPrefix: '+7',
                 initialValue: value,
               ).maskedValue,
           };

@@ -63,31 +63,39 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       return oldValue;
     }
 
-    final FormattedValue oldFormattedValue = applyMask(oldValue.text);
+    // Применяем маску к новому значению
     final FormattedValue newFormattedValue = applyMask(newValue.text);
-
-    var numSeparatorsInNew = 0;
-    var numSeparatorsInOld = 0;
-
-    var addOffset = newFormattedValue._numLeadingSymbols;
-    numSeparatorsInOld = _countSeparators(oldFormattedValue.text);
-    numSeparatorsInNew = _countSeparators(newFormattedValue.text);
-
-    var separatorsDiff = (numSeparatorsInNew - numSeparatorsInOld);
-    if (newFormattedValue._isErasing) {
-      separatorsDiff = 0;
-    }
-    var selectionOffset = newValue.selection.end + separatorsDiff;
     _maskedValue = newFormattedValue.text;
 
-    if (selectionOffset > _maskedValue.length) {
-      selectionOffset = _maskedValue.length;
+    // Вычисляем новую позицию курсора
+    int cursorPosition = newValue.selection.end;
+
+    // Если пользователь вводит символ, который является частью маски (например, пробел или скобка),
+    // перемещаем курсор вперед
+    if (newValue.text.length > oldValue.text.length) {
+      while (cursorPosition < _maskedValue.length &&
+          _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
+        cursorPosition++;
+      }
+    }
+
+    // Если пользователь удаляет символ, корректируем позицию курсора
+    if (newValue.text.length < oldValue.text.length) {
+      while (cursorPosition > 0 &&
+          _separators.any((s) => s.value == _maskedValue[cursorPosition - 1])) {
+        cursorPosition--;
+      }
+    }
+
+    // Ограничиваем позицию курсора длиной отформатированного текста
+    if (cursorPosition > _maskedValue.length) {
+      cursorPosition = _maskedValue.length;
     }
 
     return TextEditingValue(
       text: _maskedValue,
       selection: TextSelection.collapsed(
-        offset: selectionOffset + addOffset,
+        offset: cursorPosition,
         affinity: TextAffinity.upstream,
       ),
     );
