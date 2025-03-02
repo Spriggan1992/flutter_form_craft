@@ -26,7 +26,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     _separators = _prepareMask();
   }
 
-  /// Подготовка списка разделителей из маски
   List<String> _prepareMask() {
     return mask
         .split('')
@@ -34,7 +33,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
         .toList();
   }
 
-  /// Удаление разделителей из текста
   String _removeSeparators(String text) {
     String result = text;
     for (final separator in _separators) {
@@ -43,7 +41,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     return result;
   }
 
-  /// Получение разделителя для заданного индекса в маске
   Separator? _getSeparatorForIndex(int index) {
     final maskChar = mask[index];
     if (maskChar != _anyCharMask && maskChar != _onlyDigitMask) {
@@ -52,16 +49,13 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     return null;
   }
 
-  /// Применение маски к тексту
   FormattedValue applyMask(String text) {
-    // Удаляем разделители и оставляем только цифры
     String clearedValue =
         _removeSeparators(text).replaceAll(RegExp(r'[^0-9]'), '');
     final isErasing = _maskedValue.length > text.length;
     FormattedValue formattedValue = FormattedValue();
     StringBuffer stringBuffer = StringBuffer();
 
-    // Добавляем фиксированный префикс
     stringBuffer.write(fixedPrefix);
 
     var index = 0;
@@ -69,13 +63,11 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     final placeholder = List.filled(splitMask.length, '', growable: false);
     var lastRealCharIndex = fixedPrefix.length;
 
-    // Размещаем цифры в переменных позициях маски
     for (var i = fixedPrefix.length; i < splitMask.length; i++) {
       if (index >= clearedValue.length) break;
       final separator = _getSeparatorForIndex(i);
       if (separator == null) {
         final curChar = clearedValue[index];
-        // Проверяем, соответствует ли символ allowedCharMatcher
         if (allowedCharMatcher == null ||
             allowedCharMatcher!.hasMatch(curChar)) {
           placeholder[i] = curChar;
@@ -101,19 +93,17 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Если новый текст не начинается с фиксированного префикса, добавляем его
-    if (!newValue.text.startsWith(fixedPrefix)) {
+    if (newValue.text.length < fixedPrefix.length ||
+        !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
-        text: fixedPrefix + newValue.text,
+        text: fixedPrefix,
         selection: TextSelection.collapsed(offset: fixedPrefix.length),
       );
     }
 
-    final isErasing = oldValue.text.length > newValue.text.length;
     final formattedValue = applyMask(newValue.text);
     _maskedValue = formattedValue._formattedValue;
 
-    // Корректировка позиции курсора
     int selectionIndex = newValue.selection.baseOffset;
     if (selectionIndex > _maskedValue.length) {
       selectionIndex = _maskedValue.length;
@@ -121,14 +111,12 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       selectionIndex = fixedPrefix.length;
     }
 
-    if (!isErasing) {
-      // При вставке перемещаем курсор за разделители
+    if (!formattedValue._isErasing) {
       while (selectionIndex < _maskedValue.length &&
           _separators.contains(_maskedValue[selectionIndex])) {
         selectionIndex++;
       }
     } else {
-      // При удалении перемещаем курсор перед разделители
       while (selectionIndex > fixedPrefix.length &&
           _separators.contains(_maskedValue[selectionIndex - 1])) {
         selectionIndex--;
@@ -142,7 +130,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Вспомогательный класс для хранения форматированного значения
 class FormattedValue {
   late String _formattedValue;
   late bool _isErasing;
