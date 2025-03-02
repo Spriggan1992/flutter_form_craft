@@ -40,7 +40,14 @@ class MaskedInputFormatter extends TextInputFormatter {
   MaskedInputFormatter(
     this.mask, {
     this.allowedCharMatcher,
-  });
+    String initialValue = '', // Добавляем параметр initialValue
+  }) {
+    _prepareMask();
+    if (initialValue.isNotEmpty) {
+      // Применяем маску к начальному значению
+      _maskedValue = applyMask(initialValue).text;
+    }
+  }
 
   bool get isFilled => _maskedValue.length == mask.length;
 

@@ -63,6 +63,9 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       return oldValue;
     }
 
+    // Определяем, был ли ввод или удаление
+    bool isInserting = newValue.text.length > oldValue.text.length;
+
     // Применяем маску к новому значению
     final FormattedValue newFormattedValue = applyMask(newValue.text);
     _maskedValue = newFormattedValue.text;
@@ -70,17 +73,14 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     // Вычисляем новую позицию курсора
     int cursorPosition = newValue.selection.end;
 
-    // Если пользователь вводит символ, который является частью маски (например, пробел или скобка),
-    // перемещаем курсор вперед
-    if (newValue.text.length > oldValue.text.length) {
+    if (isInserting) {
+      // Если пользователь вводит символ, перемещаем курсор вперед, пропуская разделители
       while (cursorPosition < _maskedValue.length &&
           _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
         cursorPosition++;
       }
-    }
-
-    // Если пользователь удаляет символ, корректируем позицию курсора
-    if (newValue.text.length < oldValue.text.length) {
+    } else {
+      // Если пользователь удаляет символ, корректируем позицию курсора
       while (cursorPosition > 0 &&
           _separators.any((s) => s.value == _maskedValue[cursorPosition - 1])) {
         cursorPosition--;

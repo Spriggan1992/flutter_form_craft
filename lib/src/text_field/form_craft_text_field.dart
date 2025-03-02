@@ -204,7 +204,10 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       (value) {
         if (widget.mask != null) {
           _controller.text = switch (widget.mask!.maskType) {
-            MaskType.custom => value,
+            MaskType.custom => MaskedInputFormatter(
+                widget.mask!.maskPattern,
+                initialValue: value,
+              ).maskedValue,
             MaskType.phone => MaskedPhoneInputFormatter(
                 widget.mask!.maskPattern,
                 fixedPrefix: '+7',
