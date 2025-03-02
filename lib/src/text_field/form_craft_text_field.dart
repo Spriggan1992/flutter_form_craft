@@ -203,16 +203,14 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       widget.initialValue ?? '',
       (value) {
         if (widget.mask != null) {
-          final formattedValue = switch (widget.mask!.maskType) {
-            MaskType.custom =>
-              MaskedInputFormatter(widget.mask!.maskPattern).maskedValue,
+          _controller.text = switch (widget.mask!.maskType) {
+            MaskType.custom => value,
             MaskType.phone => MaskedPhoneInputFormatter(
-                    widget.mask!.maskPattern,
-                    fixedPrefix: '+7 ',
-                    initialValue: value)
-                .maskedValue,
+                widget.mask!.maskPattern,
+                fixedPrefix: '+7 ',
+                initialValue: value,
+              ).maskedValue,
           };
-          _controller.text = formattedValue;
         } else {
           _controller.text = value;
         }
