@@ -193,17 +193,29 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     ];
     _customErrorMessage = widget.customErrorMessage;
     _focusNode = widget.formController.focusNode;
+
     if (widget.mask != null) {
-      widget.formController.setController(MaskedTextController(
-        initialMask: widget.mask!,
-      ));
+      widget.formController.setController(MaskedTextController(widget.mask!));
     }
     _controller = widget.formController.controller;
 
     widget.formController._setInitialValue(
       widget.initialValue ?? '',
       (value) {
-        _controller.text = value;
+        if (widget.mask != null) {
+          final formattedValue = switch (widget.mask!.maskType) {
+            MaskType.custom =>
+              MaskedInputFormatter(widget.mask!.maskPattern).maskedValue,
+            MaskType.phone => MaskedPhoneInputFormatter(
+                    widget.mask!.maskPattern,
+                    fixedPrefix: '+7 ',
+                    initialValue: value)
+                .maskedValue,
+          };
+          _controller.text = formattedValue;
+        } else {
+          _controller.text = value;
+        }
       },
     );
     _errorMessage = widget.formController.errorMessage;
@@ -339,8 +351,13 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       onAppPrivateCommand: widget.onAppPrivateCommand,
       inputFormatters: [
         if (widget.mask != null)
-          MaskedInputFormatter(widget.mask!.maskPattern,
-              initialValue: widget.initialValue ?? ''),
+          switch (widget.mask!.maskType) {
+            MaskType.custom => MaskedInputFormatter(widget.mask!.maskPattern),
+            MaskType.phone => MaskedPhoneInputFormatter(
+                widget.mask!.maskPattern,
+                fixedPrefix: '+7 ',
+                initialValue: widget.initialValue ?? ''),
+          },
         ...widget.inputFormatters ?? []
       ],
       enabled: widget.enabled,
