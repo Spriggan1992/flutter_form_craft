@@ -20,10 +20,10 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     this.allowedCharMatcher,
     String? initialValue,
   }) {
+    _separators = _prepareMask();
     _maskedValue = initialValue?.isNotEmpty == true
         ? applyMask(initialValue!)._formattedValue
         : fixedPrefix;
-    _separators = _prepareMask();
   }
 
   List<String> _prepareMask() {
