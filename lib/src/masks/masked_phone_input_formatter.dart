@@ -1,48 +1,99 @@
-import 'dart:developer';
-
 import 'package:flutter/services.dart';
-import 'package:collection/collection.dart';
+import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
 
 class MaskedPhoneInputFormatter extends TextInputFormatter {
-  final String mask; // Маска
-  final String _anyCharMask = 'x';
-  final String _onlyDigitMask = '0';
+  final String mask;
+  final String fixedPrefix;
   final RegExp? allowedCharMatcher;
-  final List<Separator> _separators = [];
-  final String _fixedPrefix;
 
-  String _maskedValue = '';
+  late String _maskedValue;
+  late final List<String> _separators;
 
-  MaskedPhoneInputFormatter(
-    this.mask, {
-    this.allowedCharMatcher,
-    String initialValue = '',
-    required String fixedPrefix,
-  }) : _fixedPrefix = fixedPrefix {
-    _prepareMask();
-    if (initialValue.isNotEmpty) {
-      if (!initialValue.startsWith(_fixedPrefix)) {
-        initialValue = _fixedPrefix + initialValue;
-      }
-      _maskedValue = applyMask(initialValue).text;
-    } else {
-      _maskedValue = _fixedPrefix;
-    }
-  }
-
-  bool get isFilled => _maskedValue.length == mask.length;
+  static const String _anyCharMask = 'x';
+  static const String _onlyDigitMask = '0';
 
   String get maskedValue => _maskedValue;
 
-  String get unmaskedValue {
-    final stringBuffer = StringBuffer();
-    for (var i = 0; i < _maskedValue.length; i++) {
-      var char = _maskedValue[i];
-      if (!_separators.any((s) => s.value == char)) {
-        stringBuffer.write(char);
+  MaskedPhoneInputFormatter(
+    this.mask, {
+    required this.fixedPrefix,
+    this.allowedCharMatcher,
+    String? initialValue,
+  }) {
+    _maskedValue = initialValue?.isNotEmpty == true
+        ? applyMask(initialValue!)._formattedValue
+        : fixedPrefix;
+    _separators = _prepareMask();
+  }
+
+  /// Подготовка списка разделителей из маски
+  List<String> _prepareMask() {
+    return mask
+        .split('')
+        .where((ch) => ch != _anyCharMask && ch != _onlyDigitMask)
+        .toList();
+  }
+
+  /// Удаление разделителей из текста
+  String _removeSeparators(String text) {
+    String result = text;
+    for (final separator in _separators) {
+      result = result.replaceAll(separator, '');
+    }
+    return result;
+  }
+
+  /// Получение разделителя для заданного индекса в маске
+  Separator? _getSeparatorForIndex(int index) {
+    final maskChar = mask[index];
+    if (maskChar != _anyCharMask && maskChar != _onlyDigitMask) {
+      return Separator(value: maskChar, indexInMask: index);
+    }
+    return null;
+  }
+
+  /// Применение маски к тексту
+  FormattedValue applyMask(String text) {
+    // Удаляем разделители и оставляем только цифры
+    String clearedValue =
+        _removeSeparators(text).replaceAll(RegExp(r'[^0-9]'), '');
+    final isErasing = _maskedValue.length > text.length;
+    FormattedValue formattedValue = FormattedValue();
+    StringBuffer stringBuffer = StringBuffer();
+
+    // Добавляем фиксированный префикс
+    stringBuffer.write(fixedPrefix);
+
+    var index = 0;
+    final splitMask = mask.split('');
+    final placeholder = List.filled(splitMask.length, '', growable: false);
+    var lastRealCharIndex = fixedPrefix.length;
+
+    // Размещаем цифры в переменных позициях маски
+    for (var i = fixedPrefix.length; i < splitMask.length; i++) {
+      if (index >= clearedValue.length) break;
+      final separator = _getSeparatorForIndex(i);
+      if (separator == null) {
+        final curChar = clearedValue[index];
+        // Проверяем, соответствует ли символ allowedCharMatcher
+        if (allowedCharMatcher == null ||
+            allowedCharMatcher!.hasMatch(curChar)) {
+          placeholder[i] = curChar;
+          lastRealCharIndex = i + 1;
+          index++;
+        }
+      } else {
+        placeholder[i] = separator.value;
       }
     }
-    return stringBuffer.toString();
+
+    for (var i = 0; i < lastRealCharIndex; i++) {
+      stringBuffer.write(placeholder[i]);
+    }
+
+    formattedValue._isErasing = isErasing;
+    formattedValue._formattedValue = stringBuffer.toString();
+    return formattedValue;
   }
 
   @override
@@ -50,134 +101,52 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final isDeleting = newValue.text.length < oldValue.text.length;
-
-    if (!newValue.text.startsWith(_fixedPrefix)) {
-      return oldValue;
+    // Если новый текст не начинается с фиксированного префикса, добавляем его
+    if (!newValue.text.startsWith(fixedPrefix)) {
+      return TextEditingValue(
+        text: fixedPrefix + newValue.text,
+        selection: TextSelection.collapsed(offset: fixedPrefix.length),
+      );
     }
 
+    final isErasing = oldValue.text.length > newValue.text.length;
     final formattedValue = applyMask(newValue.text);
-    _maskedValue = formattedValue.text;
+    _maskedValue = formattedValue._formattedValue;
 
-    int cursorPosition = newValue.selection.end;
+    // Корректировка позиции курсора
+    int selectionIndex = newValue.selection.baseOffset;
+    if (selectionIndex > _maskedValue.length) {
+      selectionIndex = _maskedValue.length;
+    } else if (selectionIndex < fixedPrefix.length) {
+      selectionIndex = fixedPrefix.length;
+    }
 
-    if (isDeleting) {
-      while (cursorPosition > 0 &&
-          _separators.any((s) => s.value == _maskedValue[cursorPosition - 1])) {
-        cursorPosition--;
+    if (!isErasing) {
+      // При вставке перемещаем курсор за разделители
+      while (selectionIndex < _maskedValue.length &&
+          _separators.contains(_maskedValue[selectionIndex])) {
+        selectionIndex++;
       }
     } else {
-      while (cursorPosition < _maskedValue.length &&
-          _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
-        cursorPosition++;
+      // При удалении перемещаем курсор перед разделители
+      while (selectionIndex > fixedPrefix.length &&
+          _separators.contains(_maskedValue[selectionIndex - 1])) {
+        selectionIndex--;
       }
     }
-
-    cursorPosition = cursorPosition.clamp(0, _maskedValue.length);
-
-    log('Old text: ${oldValue.text}, New text: ${newValue.text}');
-    log('Formatted text: $_maskedValue, Cursor: $cursorPosition');
 
     return TextEditingValue(
       text: _maskedValue,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: TextSelection.collapsed(offset: selectionIndex),
     );
-  }
-
-  void _prepareMask() {
-    if (_separators.isEmpty) {
-      for (var i = 0; i < mask.length; i++) {
-        final separatorChar = mask[i];
-        if (separatorChar != _anyCharMask && separatorChar != _onlyDigitMask) {
-          _separators.add(
-            Separator(
-              value: separatorChar,
-              indexInMask: i,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  String _removeSeparators(String text) {
-    var stringBuffer = StringBuffer();
-    for (var i = 0; i < text.length; i++) {
-      var char = text[i];
-      if (!_separators.any((s) => s.value == char)) {
-        stringBuffer.write(char);
-      }
-    }
-    return stringBuffer.toString();
-  }
-
-  Separator? _getSeparatorForIndex(int index) {
-    return _separators.firstWhereOrNull(
-      (s) => s.indexInMask == index,
-    );
-  }
-
-  FormattedValue applyMask(String text) {
-    final clearedValue = _removeSeparators(text);
-    final formattedValue = FormattedValue();
-    final stringBuffer = StringBuffer();
-
-    // Добавляем фиксированную часть маски
-    stringBuffer.write(_fixedPrefix);
-
-    var index = 0;
-    for (var i = _fixedPrefix.length; i < mask.length; i++) {
-      final separator = _getSeparatorForIndex(i);
-      if (separator == null) {
-        if (index < clearedValue.length) {
-          final curChar = clearedValue[index];
-          final isDigitMask = mask[i] == _onlyDigitMask;
-
-          if (isDigitMask && !isDigit(curChar)) {
-            break;
-          }
-
-          if (!isDigitMask &&
-              allowedCharMatcher != null &&
-              !allowedCharMatcher!.hasMatch(curChar)) {
-            break;
-          }
-
-          stringBuffer.write(curChar);
-          index++;
-        } else {
-          break;
-        }
-      } else {
-        stringBuffer.write(separator.value);
-      }
-    }
-
-    formattedValue._formattedValue = stringBuffer.toString();
-    return formattedValue;
-  }
-
-  bool isDigit(String character) {
-    if (character.isEmpty) return false;
-    final codeUnit = character.codeUnitAt(0);
-    return codeUnit >= 48 && codeUnit <= 57;
   }
 }
 
-class Separator {
-  final String value;
-  final int indexInMask;
-
-  Separator({required this.value, required this.indexInMask});
-}
-
+/// Вспомогательный класс для хранения форматированного значения
 class FormattedValue {
-  String _formattedValue = '';
+  late String _formattedValue;
+  late bool _isErasing;
 
-  String get text => _formattedValue;
-
-  @override
-  String toString() {
-    return _formattedValue;
-  }
+  String get formattedValue => _formattedValue;
+  bool get isErasing => _isErasing;
 }
