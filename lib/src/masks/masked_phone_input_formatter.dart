@@ -1,5 +1,6 @@
+import 'dart:nativewrappers/_internal/vm/lib/developer.dart';
+
 import 'package:flutter/services.dart';
-import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
 import 'package:collection/collection.dart';
 
 class MaskedPhoneInputFormatter extends TextInputFormatter {
@@ -49,42 +50,33 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Убедимся, что фиксированная часть маски всегда присутствует
+    final isDeleting = newValue.text.length < oldValue.text.length;
+
     if (!newValue.text.startsWith(_fixedPrefix)) {
       return oldValue;
     }
 
-    // Определяем, был ли ввод или удаление
-    final isInserting = newValue.text.length > oldValue.text.length;
-
-    // Применяем маску к новому значению
     final formattedValue = applyMask(newValue.text);
     _maskedValue = formattedValue.text;
 
-    // Вычисляем новую позицию курсора
     int cursorPosition = newValue.selection.end;
 
-    if (isInserting) {
-      // Если пользователь вводит символ, перемещаем курсор вперёд, пропуская разделители
-      while (cursorPosition < _maskedValue.length &&
-          _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
-        cursorPosition++;
-      }
-    } else {
-      // Если пользователь удаляет символ, корректируем позицию курсора
+    if (isDeleting) {
       while (cursorPosition > 0 &&
           _separators.any((s) => s.value == _maskedValue[cursorPosition - 1])) {
         cursorPosition--;
       }
+    } else {
+      while (cursorPosition < _maskedValue.length &&
+          _separators.any((s) => s.value == _maskedValue[cursorPosition])) {
+        cursorPosition++;
+      }
     }
 
-    // Если курсор перешёл в начало, вернуть его на место после фиксированного префикса
-    if (cursorPosition < _fixedPrefix.length) {
-      cursorPosition = _fixedPrefix.length;
-    }
-
-    // Ограничиваем позицию курсора длиной отформатированного текста
     cursorPosition = cursorPosition.clamp(0, _maskedValue.length);
+
+    log('Old text: ${oldValue.text}, New text: ${newValue.text}');
+    log('Formatted text: $_maskedValue, Cursor: $cursorPosition');
 
     return TextEditingValue(
       text: _maskedValue,
