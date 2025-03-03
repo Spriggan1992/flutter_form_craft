@@ -21,7 +21,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }) {
     _separators = _prepareMask();
     _maskedValue = initialValue?.isNotEmpty == true
-        ? applyMask(initialValue!)._formattedValue
+        ? fixedPrefix + applyMask(initialValue!).formattedValue
         : fixedPrefix;
   }
 
@@ -43,20 +43,16 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   FormattedValue applyMask(String text) {
     String clearedValue =
         _removeSeparators(text).replaceAll(RegExp(r'[^0-9]'), '');
-    final isErasing = _maskedValue.length > text.length;
+    final isErasing = _maskedValue.length > (fixedPrefix.length + text.length);
     FormattedValue formattedValue = FormattedValue();
     StringBuffer stringBuffer = StringBuffer();
-
-    stringBuffer.write(fixedPrefix);
 
     var index = 0;
     final splitMask = mask.split('');
     final placeholder = List.filled(splitMask.length, '', growable: false);
-    var lastRealCharIndex = fixedPrefix.length;
+    var lastRealCharIndex = 0;
 
-    // Проходим по маске, начиная после префикса
-    for (var i = fixedPrefix.length; i < splitMask.length; i++) {
-      if (index >= clearedValue.length) break;
+    for (var i = 0; i < splitMask.length && index < clearedValue.length; i++) {
       final maskChar = splitMask[i];
       if (maskChar == _anyCharMask || maskChar == _onlyDigitMask) {
         final curChar = clearedValue[index];
@@ -85,47 +81,48 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (newValue.text.length < fixedPrefix.length ||
-        !newValue.text.startsWith(fixedPrefix)) {
+    if (newValue.text.length < fixedPrefix.length) {
       return TextEditingValue(
         text: fixedPrefix,
         selection: TextSelection.collapsed(offset: fixedPrefix.length),
       );
     }
 
-    String inputText = newValue.text.substring(fixedPrefix.length);
-
-    if (inputText.isEmpty && newValue.text == fixedPrefix) {
-      return newValue;
+    if (!newValue.text.startsWith(fixedPrefix)) {
+      return TextEditingValue(
+        text: fixedPrefix,
+        selection: TextSelection.collapsed(offset: fixedPrefix.length),
+      );
     }
 
-    final formattedValue = applyMask(fixedPrefix + inputText);
-    _maskedValue = formattedValue._formattedValue;
+    String userInput = newValue.text.substring(fixedPrefix.length);
+
+    final formattedValue = applyMask(userInput);
+    _maskedValue = fixedPrefix + formattedValue.formattedValue;
 
     int selectionIndex = newValue.selection.baseOffset;
-
-    if (newValue.text.length > oldValue.text.length) {
-      final newChar = newValue.text[newValue.selection.baseOffset - 1];
-
-      if (fixedPrefix.contains(newChar) &&
-          newValue.selection.baseOffset - 1 >= fixedPrefix.length) {}
+    if (selectionIndex < fixedPrefix.length) {
+      selectionIndex = fixedPrefix.length;
     }
 
-    final newTextLength = newValue.text.length;
-    final formattedTextLength = _maskedValue.length;
-    selectionIndex += formattedTextLength - newTextLength;
+    int offset = selectionIndex - fixedPrefix.length;
+    int newOffset = offset;
 
-    selectionIndex =
-        selectionIndex.clamp(fixedPrefix.length, formattedTextLength);
-
-    while (selectionIndex < _maskedValue.length &&
-        _separators.contains(_maskedValue[selectionIndex])) {
-      selectionIndex++;
+    if (!formattedValue.isErasing) {
+      while (newOffset < formattedValue.formattedValue.length &&
+          _separators.contains(formattedValue.formattedValue[newOffset])) {
+        newOffset++;
+      }
+    } else {
+      while (newOffset > 0 &&
+          _separators.contains(formattedValue.formattedValue[newOffset - 1])) {
+        newOffset--;
+      }
     }
 
-    while (selectionIndex > fixedPrefix.length &&
-        _separators.contains(_maskedValue[selectionIndex - 1])) {
-      selectionIndex--;
+    selectionIndex = fixedPrefix.length + newOffset;
+    if (selectionIndex > _maskedValue.length) {
+      selectionIndex = _maskedValue.length;
     }
 
     return TextEditingValue(
