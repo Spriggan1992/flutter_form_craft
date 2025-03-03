@@ -35,9 +35,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   String _removeSeparators(String text) {
     String result = text; // Обрабатываем всю строку, включая префикс
     for (final separator in _separators) {
-      if (!fixedPrefix.contains(separator)) {
-        result = result.replaceAll(separator, '');
-      }
+      result = result.replaceAll(separator, '');
     }
     return result;
   }
