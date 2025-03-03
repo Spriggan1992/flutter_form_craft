@@ -114,19 +114,17 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     int selectionIndex = newValue.selection.baseOffset;
     final cleanPrefix = fixedPrefix.replaceAll(RegExp(r'\D'), '');
 
-    if (selectionIndex == fixedPrefix.length + cleanPrefix.length &&
-        inputText.isNotEmpty &&
-        !_maskedValue.startsWith(fixedPrefix + cleanPrefix)) {
+    if (newValue.text.length == fixedPrefix.length + 1 &&
+        !_maskedValue
+            .startsWith(fixedPrefix + newValue.text[fixedPrefix.length]) &&
+        newValue.text[fixedPrefix.length] == cleanPrefix) {
       _maskedValue = fixedPrefix +
-          cleanPrefix +
-          _maskedValue.substring(fixedPrefix.length + cleanPrefix.length);
-      selectionIndex = fixedPrefix.length + cleanPrefix.length;
-    } else if (inputText.isNotEmpty &&
-        !_maskedValue.startsWith(fixedPrefix + inputText[0]) &&
-        inputText.startsWith(cleanPrefix)) {
-      _maskedValue = fixedPrefix +
-          inputText[0] +
+          newValue.text[fixedPrefix.length] +
           _maskedValue.substring(fixedPrefix.length + 1);
+      selectionIndex = fixedPrefix.length + 1;
+    } else if (newValue.text.length == fixedPrefix.length + 1 &&
+        newValue.text[fixedPrefix.length] != cleanPrefix) {
+      _maskedValue = fixedPrefix + newValue.text[fixedPrefix.length];
       selectionIndex = fixedPrefix.length + 1;
     }
 
