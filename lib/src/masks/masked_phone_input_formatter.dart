@@ -33,10 +33,15 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }
 
   String _removeSeparators(String text) {
-    String result = text; // Обрабатываем всю строку, включая префикс
-    for (final separator in _separators) {
-      result = result.replaceAll(separator, '');
+    String result = text;
+    for (var i = 0; i < _separators.length; i++) {
+      if ((i != 0 || i != 1) && !result.contains(_separators[7])) {
+        result = result.replaceAll(_separators[i], '');
+      } else {
+        result = result.replaceAll(_separators[i], '');
+      }
     }
+
     return result;
   }
 
@@ -78,9 +83,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     }
 
     formattedValue._isErasing = isErasing;
-    formattedValue._formattedValue = text[text.length - 1] == '7'
-        ? '${stringBuffer.toString()}7'
-        : stringBuffer.toString();
+    formattedValue._formattedValue = stringBuffer.toString();
     return formattedValue;
   }
 
