@@ -78,7 +78,9 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     }
 
     formattedValue._isErasing = isErasing;
-    formattedValue._formattedValue = stringBuffer.toString();
+    formattedValue._formattedValue = text[text.length - 1] == '7'
+        ? '${stringBuffer.toString()}7'
+        : stringBuffer.toString();
     return formattedValue;
   }
 
