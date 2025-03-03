@@ -112,20 +112,13 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     _maskedValue = formattedValue._formattedValue;
 
     int selectionIndex = newValue.selection.baseOffset;
-    final cleanPrefix = fixedPrefix.replaceAll(RegExp(r'\D'), '');
 
-    if (newValue.text.length == fixedPrefix.length + 1 &&
-        !_maskedValue
-            .startsWith(fixedPrefix + newValue.text[fixedPrefix.length]) &&
-        newValue.text[fixedPrefix.length] == cleanPrefix) {
-      _maskedValue = fixedPrefix +
-          newValue.text[fixedPrefix.length] +
-          _maskedValue.substring(fixedPrefix.length + 1);
-      selectionIndex = fixedPrefix.length + 1;
-    } else if (newValue.text.length == fixedPrefix.length + 1 &&
-        newValue.text[fixedPrefix.length] != cleanPrefix) {
-      _maskedValue = fixedPrefix + newValue.text[fixedPrefix.length];
-      selectionIndex = fixedPrefix.length + 1;
+    // Корректируем позицию курсора, если введённый символ совпадает с символом из префикса
+    if (newValue.text.length > oldValue.text.length) {
+      final newChar = newValue.text[newValue.selection.baseOffset - 1];
+      if (fixedPrefix.contains(newChar) && _isCharAllowedInMask(newChar)) {
+        selectionIndex++;
+      }
     }
 
     final newTextLength = newValue.text.length;
@@ -149,6 +142,16 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       text: _maskedValue,
       selection: TextSelection.collapsed(offset: selectionIndex),
     );
+  }
+
+  bool _isCharAllowedInMask(String char) {
+    final maskChar = mask[fixedPrefix.length]; // Символ маски после префикса
+    if (maskChar == _anyCharMask) {
+      return true; // Любой символ разрешён
+    } else if (maskChar == _onlyDigitMask) {
+      return RegExp(r'[0-9]').hasMatch(char); // Только цифры
+    }
+    return false; // Символ не разрешён
   }
 }
 
