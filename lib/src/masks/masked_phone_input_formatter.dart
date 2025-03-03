@@ -101,14 +101,16 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       );
     }
 
-    final formattedValue = applyMask(newValue.text);
+    final String withoutPrefix = newValue.text.substring(fixedPrefix.length);
+
+    final formattedValue = applyMask(fixedPrefix + withoutPrefix);
     _maskedValue = formattedValue._formattedValue;
+
+    int selectionIndex = newValue.selection.baseOffset;
 
     final newTextLength = newValue.text.length;
     final formattedTextLength = _maskedValue.length;
-
-    int selectionIndex =
-        newValue.selection.baseOffset + (formattedTextLength - newTextLength);
+    selectionIndex += formattedTextLength - newTextLength;
 
     selectionIndex =
         selectionIndex.clamp(fixedPrefix.length, formattedTextLength);
