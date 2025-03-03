@@ -6,7 +6,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   final String fixedPrefix;
   final RegExp? allowedCharMatcher;
 
-  late String _maskedValue;
+  String _maskedValue = '';
   late final List<String> _separators;
 
   static const String _anyCharMask = 'x';
