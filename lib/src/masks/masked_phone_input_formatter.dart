@@ -21,7 +21,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }) {
     _separators = _prepareMask();
     _maskedValue = initialValue?.isNotEmpty == true
-        ? fixedPrefix + applyMask(initialValue!).formattedValue
+        ? applyMask(initialValue!)._formattedValue
         : fixedPrefix;
   }
 
@@ -43,26 +43,32 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   FormattedValue applyMask(String text) {
     String clearedValue =
         _removeSeparators(text).replaceAll(RegExp(r'[^0-9]'), '');
-    final isErasing = _maskedValue.length > (fixedPrefix.length + text.length);
+    final isErasing = _maskedValue.length > text.length;
     FormattedValue formattedValue = FormattedValue();
     StringBuffer stringBuffer = StringBuffer();
+
+    stringBuffer.write(fixedPrefix);
 
     var index = 0;
     final splitMask = mask.split('');
     final placeholder = List.filled(splitMask.length, '', growable: false);
-    var lastRealCharIndex = 0;
+    var lastRealCharIndex = fixedPrefix.length;
 
-    for (var i = 0; i < splitMask.length && index < clearedValue.length; i++) {
+    // Проходим по маске, начиная после префикса
+    for (var i = fixedPrefix.length; i < splitMask.length; i++) {
+      if (index >= clearedValue.length) break;
       final maskChar = splitMask[i];
       if (maskChar == _anyCharMask || maskChar == _onlyDigitMask) {
+        // Это позиция для ввода символа
         final curChar = clearedValue[index];
         if (maskChar == _onlyDigitMask && !RegExp(r'[0-9]').hasMatch(curChar)) {
-          continue;
+          continue; // Пропускаем недопустимые символы
         }
         placeholder[i] = curChar;
         lastRealCharIndex = i + 1;
         index++;
       } else {
+        // Это разделитель
         placeholder[i] = maskChar;
       }
     }
@@ -81,48 +87,59 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (newValue.text.length < fixedPrefix.length) {
+    // Если текст полностью удалён или префикс отсутствует, восстанавливаем префикс
+    if (newValue.text.length < fixedPrefix.length ||
+        !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
         text: fixedPrefix,
         selection: TextSelection.collapsed(offset: fixedPrefix.length),
       );
     }
 
-    if (!newValue.text.startsWith(fixedPrefix)) {
-      return TextEditingValue(
-        text: fixedPrefix,
-        selection: TextSelection.collapsed(offset: fixedPrefix.length),
-      );
+    // Выделяем текст, который ввёл пользователь (без префикса)
+    String inputText = newValue.text.substring(fixedPrefix.length);
+
+    // Если текст пустой и равен префиксу, возвращаем текущее значение
+    if (inputText.isEmpty && newValue.text == fixedPrefix) {
+      return newValue;
     }
 
-    String userInput = newValue.text.substring(fixedPrefix.length);
+    // Применяем маску к введённому тексту
+    final formattedValue = applyMask(fixedPrefix + inputText);
+    _maskedValue = formattedValue._formattedValue;
 
-    final formattedValue = applyMask(userInput);
-    _maskedValue = fixedPrefix + formattedValue.formattedValue;
-
+    // Корректируем позицию курсора
     int selectionIndex = newValue.selection.baseOffset;
-    if (selectionIndex < fixedPrefix.length) {
-      selectionIndex = fixedPrefix.length;
-    }
 
-    int offset = selectionIndex - fixedPrefix.length;
-    int newOffset = offset;
+    // Если пользователь добавляет символ
+    if (newValue.text.length > oldValue.text.length) {
+      final newChar = newValue.text[newValue.selection.baseOffset - 1];
 
-    if (!formattedValue.isErasing) {
-      while (newOffset < formattedValue.formattedValue.length &&
-          _separators.contains(formattedValue.formattedValue[newOffset])) {
-        newOffset++;
-      }
-    } else {
-      while (newOffset > 0 &&
-          _separators.contains(formattedValue.formattedValue[newOffset - 1])) {
-        newOffset--;
+      // Если символ совпадает с символом из префикса, но находится за его пределами, разрешаем ввод
+      if (fixedPrefix.contains(newChar) &&
+          newValue.selection.baseOffset - 1 >= fixedPrefix.length) {
+        // Ничего не делаем, символ будет добавлен в маску
       }
     }
 
-    selectionIndex = fixedPrefix.length + newOffset;
-    if (selectionIndex > _maskedValue.length) {
-      selectionIndex = _maskedValue.length;
+    // Корректируем позицию курсора с учётом длины отформатированного текста
+    final newTextLength = newValue.text.length;
+    final formattedTextLength = _maskedValue.length;
+    selectionIndex += formattedTextLength - newTextLength;
+
+    // Ограничиваем позицию курсора в пределах текста
+    selectionIndex =
+        selectionIndex.clamp(fixedPrefix.length, formattedTextLength);
+
+    // Пропускаем разделители при перемещении курсора
+    while (selectionIndex < _maskedValue.length &&
+        _separators.contains(_maskedValue[selectionIndex])) {
+      selectionIndex++;
+    }
+
+    while (selectionIndex > fixedPrefix.length &&
+        _separators.contains(_maskedValue[selectionIndex - 1])) {
+      selectionIndex--;
     }
 
     return TextEditingValue(
