@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
 
 class MaskedPhoneInputFormatter extends TextInputFormatter {
   final String mask;
@@ -41,14 +40,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     return result;
   }
 
-  Separator? _getSeparatorForIndex(int index) {
-    final maskChar = mask[index];
-    if (maskChar != _anyCharMask && maskChar != _onlyDigitMask) {
-      return Separator(value: maskChar, indexInMask: index);
-    }
-    return null;
-  }
-
   FormattedValue applyMask(String text) {
     String clearedValue =
         _removeSeparators(text).replaceAll(RegExp(r'[^0-9]'), '');
@@ -63,19 +54,20 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     final placeholder = List.filled(splitMask.length, '', growable: false);
     var lastRealCharIndex = fixedPrefix.length;
 
+    // Проходим по маске, начиная после префикса
     for (var i = fixedPrefix.length; i < splitMask.length; i++) {
       if (index >= clearedValue.length) break;
-      final separator = _getSeparatorForIndex(i);
-      if (separator == null) {
+      final maskChar = splitMask[i];
+      if (maskChar == _anyCharMask || maskChar == _onlyDigitMask) {
         final curChar = clearedValue[index];
-        if (allowedCharMatcher == null ||
-            allowedCharMatcher!.hasMatch(curChar)) {
-          placeholder[i] = curChar;
-          lastRealCharIndex = i + 1;
-          index++;
+        if (maskChar == _onlyDigitMask && !RegExp(r'[0-9]').hasMatch(curChar)) {
+          continue;
         }
+        placeholder[i] = curChar;
+        lastRealCharIndex = i + 1;
+        index++;
       } else {
-        placeholder[i] = separator.value;
+        placeholder[i] = maskChar;
       }
     }
 
@@ -115,11 +107,8 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     if (newValue.text.length > oldValue.text.length) {
       final newChar = newValue.text[newValue.selection.baseOffset - 1];
 
-      if (fixedPrefix.contains(newChar)) {
-        if (newValue.selection.baseOffset - 1 >= fixedPrefix.length) {
-          selectionIndex++;
-        }
-      }
+      if (fixedPrefix.contains(newChar) &&
+          newValue.selection.baseOffset - 1 >= fixedPrefix.length) {}
     }
 
     final newTextLength = newValue.text.length;
