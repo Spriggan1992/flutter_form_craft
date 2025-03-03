@@ -93,6 +93,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
+    // Проверяем, чтобы текст начинался с фиксированного префикса
     if (newValue.text.length < fixedPrefix.length ||
         !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
@@ -101,28 +102,33 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       );
     }
 
+    // Применяем маску к новому тексту
     final formattedValue = applyMask(newValue.text);
     _maskedValue = formattedValue._formattedValue;
 
+    // Инициализируем индекс позиции курсора
     int selectionIndex = newValue.selection.baseOffset;
-    if (selectionIndex > _maskedValue.length) {
-      selectionIndex = _maskedValue.length;
-    } else if (selectionIndex < fixedPrefix.length) {
-      selectionIndex = fixedPrefix.length;
-    }
 
+    // Ограничиваем позицию курсора длиной отформатированного текста
+    selectionIndex =
+        selectionIndex.clamp(fixedPrefix.length, _maskedValue.length);
+
+    // Обработка добавления символов
     if (!formattedValue._isErasing) {
       while (selectionIndex < _maskedValue.length &&
           _separators.contains(_maskedValue[selectionIndex])) {
         selectionIndex++;
       }
-    } else {
+    }
+    // Обработка удаления символов
+    else {
       while (selectionIndex > fixedPrefix.length &&
           _separators.contains(_maskedValue[selectionIndex - 1])) {
         selectionIndex--;
       }
     }
 
+    // Возвращаем новое состояние текстового поля
     return TextEditingValue(
       text: _maskedValue,
       selection: TextSelection.collapsed(offset: selectionIndex),
