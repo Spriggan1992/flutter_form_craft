@@ -93,7 +93,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Если текст полностью удалён или префикс отсутствует, восстанавливаем префикс
     if (newValue.text.length < fixedPrefix.length ||
         !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
@@ -113,11 +112,13 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
 
     int selectionIndex = newValue.selection.baseOffset;
 
-    // Корректируем позицию курсора, если введённый символ совпадает с символом из префикса
     if (newValue.text.length > oldValue.text.length) {
       final newChar = newValue.text[newValue.selection.baseOffset - 1];
-      if (fixedPrefix.contains(newChar) && _isCharAllowedInMask(newChar)) {
-        selectionIndex++;
+
+      if (fixedPrefix.contains(newChar)) {
+        if (newValue.selection.baseOffset - 1 >= fixedPrefix.length) {
+          selectionIndex++;
+        }
       }
     }
 
@@ -142,16 +143,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       text: _maskedValue,
       selection: TextSelection.collapsed(offset: selectionIndex),
     );
-  }
-
-  bool _isCharAllowedInMask(String char) {
-    final maskChar = mask[fixedPrefix.length]; // Символ маски после префикса
-    if (maskChar == _anyCharMask) {
-      return true; // Любой символ разрешён
-    } else if (maskChar == _onlyDigitMask) {
-      return RegExp(r'[0-9]').hasMatch(char); // Только цифры
-    }
-    return false; // Символ не разрешён
   }
 }
 
