@@ -33,11 +33,11 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }
 
   String _removeSeparators(String text) {
-    String result = text.substring(fixedPrefix.length);
-    final separators = _separators.where((separator) => separator != '7');
-
-    for (final separator in separators) {
-      result = result.replaceAll(separator, '');
+    String result = text; // Обрабатываем всю строку, включая префикс
+    for (final separator in _separators) {
+      if (!fixedPrefix.contains(separator)) {
+        result = result.replaceAll(separator, '');
+      }
     }
     return result;
   }
@@ -63,8 +63,9 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       if (maskChar == _anyCharMask || maskChar == _onlyDigitMask) {
         final curChar = clearedValue[index];
 
-        if (maskChar == _onlyDigitMask &&
-            !RegExp(r'[0-9]').hasMatch(curChar)) {}
+        if (maskChar == _onlyDigitMask && !RegExp(r'[0-9]').hasMatch(curChar)) {
+          continue;
+        }
 
         placeholder[i] = curChar;
         lastRealCharIndex = i + 1;
