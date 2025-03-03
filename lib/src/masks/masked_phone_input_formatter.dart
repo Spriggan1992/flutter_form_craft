@@ -93,7 +93,6 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Проверяем, чтобы текст начинался с фиксированного префикса
     if (newValue.text.length < fixedPrefix.length ||
         !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
@@ -102,33 +101,28 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       );
     }
 
-    // Применяем маску к новому тексту
     final formattedValue = applyMask(newValue.text);
     _maskedValue = formattedValue._formattedValue;
 
-    // Инициализируем индекс позиции курсора
-    int selectionIndex = newValue.selection.baseOffset;
+    final newTextLength = newValue.text.length;
+    final formattedTextLength = _maskedValue.length;
 
-    // Ограничиваем позицию курсора длиной отформатированного текста
+    int selectionIndex =
+        newValue.selection.baseOffset + (formattedTextLength - newTextLength);
+
     selectionIndex =
-        selectionIndex.clamp(fixedPrefix.length, _maskedValue.length);
+        selectionIndex.clamp(fixedPrefix.length, formattedTextLength);
 
-    // Обработка добавления символов
-    if (!formattedValue._isErasing) {
-      while (selectionIndex < _maskedValue.length &&
-          _separators.contains(_maskedValue[selectionIndex])) {
-        selectionIndex++;
-      }
-    }
-    // Обработка удаления символов
-    else {
-      while (selectionIndex > fixedPrefix.length &&
-          _separators.contains(_maskedValue[selectionIndex - 1])) {
-        selectionIndex--;
-      }
+    while (selectionIndex < _maskedValue.length &&
+        _separators.contains(_maskedValue[selectionIndex])) {
+      selectionIndex++;
     }
 
-    // Возвращаем новое состояние текстового поля
+    while (selectionIndex > fixedPrefix.length &&
+        _separators.contains(_maskedValue[selectionIndex - 1])) {
+      selectionIndex--;
+    }
+
     return TextEditingValue(
       text: _maskedValue,
       selection: TextSelection.collapsed(offset: selectionIndex),
