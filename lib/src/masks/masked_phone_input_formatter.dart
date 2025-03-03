@@ -93,6 +93,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
+    // Если текст полностью удалён или префикс отсутствует, восстанавливаем префикс
     if (newValue.text.length < fixedPrefix.length ||
         !newValue.text.startsWith(fixedPrefix)) {
       return TextEditingValue(
@@ -101,12 +102,27 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
       );
     }
 
-    final String withoutPrefix = newValue.text.substring(fixedPrefix.length);
+    String inputText = newValue.text.substring(fixedPrefix.length);
 
-    final formattedValue = applyMask(fixedPrefix + withoutPrefix);
+    if (inputText.isEmpty && newValue.text == fixedPrefix) {
+      return newValue;
+    }
+
+    final formattedValue = applyMask(fixedPrefix + inputText);
     _maskedValue = formattedValue._formattedValue;
 
     int selectionIndex = newValue.selection.baseOffset;
+    final cleanPrefix = fixedPrefix.replaceAll(RegExp(r'\D'), '');
+
+    if (selectionIndex == fixedPrefix.length + cleanPrefix.length &&
+        inputText.isNotEmpty &&
+        inputText.startsWith(cleanPrefix) &&
+        !_maskedValue.startsWith(fixedPrefix + cleanPrefix)) {
+      _maskedValue = fixedPrefix +
+          cleanPrefix +
+          _maskedValue.substring(fixedPrefix.length + cleanPrefix.length);
+      selectionIndex = fixedPrefix.length + cleanPrefix.length;
+    }
 
     final newTextLength = newValue.text.length;
     final formattedTextLength = _maskedValue.length;
