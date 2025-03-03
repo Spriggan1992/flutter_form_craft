@@ -33,15 +33,13 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
   }
 
   String _removeSeparators(String text) {
-    StringBuffer result = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (!_separators.any((separator) => separator == char) ||
-          fixedPrefix.contains(char)) {
-        result.write(char);
-      }
+    String result = text.substring(fixedPrefix.length);
+    final separators = _separators.where((separator) => separator != '7');
+
+    for (final separator in separators) {
+      result = result.replaceAll(separator, '');
     }
-    return result.toString();
+    return result;
   }
 
   FormattedValue applyMask(String text) {
