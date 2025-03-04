@@ -40,7 +40,7 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
           result = result.replaceAll(_separators[i], '');
         }
       } else {
-        result = result.replaceAll(_separators[i], '');
+        result = result.replaceFirst(_separators[i], '');
       }
     }
 
