@@ -127,15 +127,17 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
     selectionIndex =
         selectionIndex.clamp(fixedPrefix.length, formattedTextLength);
 
+    // final bool alreadyDeletedPrefixNumber = false;
+
     while (selectionIndex < _maskedValue.length &&
         _separators.contains(_maskedValue[selectionIndex])) {
       selectionIndex++;
     }
 
-    while (selectionIndex > fixedPrefix.length &&
-        _separators.contains(_maskedValue[selectionIndex - 1])) {
-      selectionIndex--;
-    }
+    // while (selectionIndex > fixedPrefix.length &&
+    //     _separators.contains(_maskedValue[selectionIndex - 1])) {
+    //   selectionIndex--;
+    // }
 
     return TextEditingValue(
       text: _maskedValue,
