@@ -85,6 +85,10 @@ class FormCraft {
     _fieldManager.reassignInputValue(key, value, isRevalidate);
   }
 
+  GlobalKey getGlobalKey(String key) {
+    return _fieldManager.getGlobalKey(key);
+  }
+
   /// Gets [FocusNode] for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.

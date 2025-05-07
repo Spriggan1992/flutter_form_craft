@@ -101,6 +101,14 @@ base class FormCraftFieldManager {
     }
   }
 
+  /// Gets the [GlobalKey] for a specific field.
+  GlobalKey getGlobalKey(String key) {
+    _checkIfKeyExist(key);
+
+    // return controllers[key]!.globalKey;
+    return controllers[key]!.globalKey;
+  }
+
   /// Gets [FocusNode] for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.
