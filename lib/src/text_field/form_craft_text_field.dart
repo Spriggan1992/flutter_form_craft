@@ -333,7 +333,11 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       textAlignVertical: widget.textAlignVertical,
       textDirection: widget.textDirection,
       readOnly: widget.readOnly,
-      contextMenuBuilder: widget.contextMenuBuilder,
+      contextMenuBuilder: (context, editableTextState) =>
+          widget.contextMenuBuilder?.call(context, editableTextState) ??
+          AdaptiveTextSelectionToolbar.editableText(
+            editableTextState: editableTextState,
+          ),
       showCursor: widget.showCursor,
       autofocus: widget.autofocus,
       obscuringCharacter: widget.obscuringCharacter,
