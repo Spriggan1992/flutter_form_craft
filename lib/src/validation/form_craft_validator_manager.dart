@@ -16,7 +16,7 @@ base class FormCraftValidatorManager {
     var validate = <bool>[];
     _manager.controllers.forEach((key, value) {
       // Validate the current field and add the result to the list
-      final isValid = value.globalKey.currentState!.validate();
+      final isValid = value.globalKey.currentState?.validate() ?? true;
 
       validate.add(isValid);
     });

@@ -5,7 +5,7 @@ homepage: https://github.com/Spriggan1992/flutter_form_craft/blob/main/README.md
 repository: https://github.com/Spriggan1992/flutter_form_craft
 
 environment:
-  sdk: '>=3.2.4 <4.0.0'
+  sdk: ">=3.2.4 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:
