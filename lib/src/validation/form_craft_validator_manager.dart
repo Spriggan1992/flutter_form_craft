@@ -4,9 +4,13 @@ part of '../form_craft.dart';
 base class FormCraftValidatorManager {
   /// Map of field keys to corresponding FormCraftTextField widgets.
   final FormCraftFieldManager _manager;
+  final bool _isUnmountedFieldValid;
 
   /// Creates a new instance of FormCraftValidatorManager.
-  const FormCraftValidatorManager(this._manager);
+  const FormCraftValidatorManager(
+    this._manager, {
+    bool isUnmountedFieldValid = true,
+  }) : _isUnmountedFieldValid = isUnmountedFieldValid;
 
   /// Validates all FormCraftTextField widgets and returns true if all are valid.
   ///
@@ -16,7 +20,8 @@ base class FormCraftValidatorManager {
     var validate = <bool>[];
     _manager.controllers.forEach((key, value) {
       // Validate the current field and add the result to the list
-      final isValid = value.globalKey.currentState?.validate() ?? true;
+      final state = value.globalKey.currentState;
+      final isValid = state == null ? _isUnmountedFieldValid : state.validate();
 
       validate.add(isValid);
     });

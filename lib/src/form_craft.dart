@@ -33,9 +33,13 @@ class FormCraft {
   FormCraft({
     bool isPersistState = true,
     List<String> preRegisteredFields = const [],
+    bool isUnmountedFieldValid = true,
   }) {
     _fieldManager = FormCraftFieldManager(isPersistState, preRegisteredFields);
-    _validatorManager = FormCraftValidatorManager(_fieldManager);
+    _validatorManager = FormCraftValidatorManager(
+      _fieldManager,
+      isUnmountedFieldValid: isUnmountedFieldValid,
+    );
   }
 
   /// Create a new instance of FormCraft for testing purposes.

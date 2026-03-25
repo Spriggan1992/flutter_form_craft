@@ -531,7 +531,7 @@ enum ThousandSeparator {
   SpaceAndCommaMantissa,
 }
 
-const allFiatCurrencies = const <String>[
+const allFiatCurrencies = <String>[
   'CNY',
   'USD',
   'EUR',

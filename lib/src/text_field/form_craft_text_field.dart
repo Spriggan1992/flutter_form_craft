@@ -99,12 +99,18 @@ class FormCraftTextField extends StatefulWidget {
   final ContentInsertionConfiguration? contentInsertionConfiguration;
   final Clip clipBehavior;
   final String? restorationId;
-  final bool scribbleEnabled;
+  @Deprecated(
+    'Use stylusHandwritingEnabled instead. '
+    'This will be removed in a future release.',
+  )
+  final bool? scribbleEnabled;
+  final bool? stylusHandwritingEnabled;
   final bool enableIMEPersonalizedLearning;
   final bool canRequestFocus;
   final SpellCheckConfiguration? spellCheckConfiguration;
   final TextMagnifierConfiguration? magnifierConfiguration;
   final PersistentMask? mask;
+  final bool stickyCustomError;
 
   /// Constructor for initializing the FormCraftTextField.
   FormCraftTextField({
@@ -152,6 +158,7 @@ class FormCraftTextField extends StatefulWidget {
     this.scrollPhysics,
     this.contentInsertionConfiguration,
     this.restorationId,
+    this.stylusHandwritingEnabled,
     this.spellCheckConfiguration,
     this.magnifierConfiguration,
     this.decorationBuilder,
@@ -165,12 +172,17 @@ class FormCraftTextField extends StatefulWidget {
     this.dragStartBehavior = DragStartBehavior.start,
     this.autofillHints = const <String>[],
     this.clipBehavior = Clip.hardEdge,
+    @Deprecated(
+      'Use stylusHandwritingEnabled instead. '
+      'This will be removed in a future release.',
+    )
     this.scribbleEnabled = true,
     this.enableIMEPersonalizedLearning = true,
     this.canRequestFocus = true,
     this.customErrorMessage,
     required this.formController,
     this.mask,
+    this.stickyCustomError = false,
   }) : super(key: formController.globalKey);
 
   @override
@@ -187,10 +199,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
 
   @override
   void initState() {
-    _validators = [
-      if (widget.mask?.validator != null) widget.mask!.validator!,
-      ...widget.validators ?? []
-    ];
+    _validators = [if (widget.mask?.validator != null) widget.mask!.validator!, ...widget.validators ?? []];
     _customErrorMessage = widget.customErrorMessage;
     _focusNode = widget.formController.focusNode;
 
@@ -225,9 +234,11 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
 
   @override
   void didUpdateWidget(covariant FormCraftTextField oldWidget) {
-    // _focusNode = widget.formController.focusNode;
-    // _controller = widget.formController.controller;
-    // _errorMessage = widget.formController.errorMessage;
+    _validators = [if (widget.mask?.validator != null) widget.mask!.validator!, ...widget.validators ?? []];
+    _customErrorMessage = widget.customErrorMessage;
+    _focusNode = widget.formController.focusNode;
+    _controller = widget.formController.controller;
+    _errorMessage = widget.formController.errorMessage;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -261,11 +272,6 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     widget.formController._setErrorMessage(_errorMessage);
   }
 
-// Retrieves the current input value.
-  String _getInputValue() {
-    return _controller.text;
-  }
-
 // Refreshes the state of the input field.
   void _refreshForm() {
     _reassignError(null);
@@ -279,9 +285,10 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
         return true;
       } else {
         for (var validator in _validators!) {
-          _reassignError(validator.validate(_controller.text));
+          final error = validator.validate(_controller.text);
+          _reassignError(error);
 
-          if (validator.validate(_controller.text) != null) {
+          if (error != null) {
             break;
           }
         }
@@ -310,6 +317,9 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
 
 // Callback when the input value changes.
   void _onChanged(String value) {
+    if (!widget.stickyCustomError) {
+      _customErrorMessage = null;
+    }
     if (_validateType == FormCraftValidationType.onSubmit) {
       _reassignError(null);
     } else {
@@ -358,10 +368,8 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
         if (widget.mask != null)
           switch (widget.mask!.maskType) {
             MaskType.custom => MaskedInputFormatter(widget.mask!.maskPattern),
-            MaskType.phone => MaskedPhoneInputFormatter(
-                widget.mask!.maskPattern,
-                fixedPrefix: '+7 ',
-                initialValue: widget.initialValue ?? ''),
+            MaskType.phone => MaskedPhoneInputFormatter(widget.mask!.maskPattern,
+                fixedPrefix: '+7 ', initialValue: widget.initialValue ?? ''),
           },
         ...widget.inputFormatters ?? []
       ],
@@ -388,7 +396,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       contentInsertionConfiguration: widget.contentInsertionConfiguration,
       clipBehavior: widget.clipBehavior,
       restorationId: widget.restorationId,
-      scribbleEnabled: widget.scribbleEnabled,
+      stylusHandwritingEnabled: widget.stylusHandwritingEnabled ?? widget.scribbleEnabled ?? true,
       enableIMEPersonalizedLearning: widget.enableIMEPersonalizedLearning,
       canRequestFocus: widget.canRequestFocus,
       spellCheckConfiguration: widget.spellCheckConfiguration,

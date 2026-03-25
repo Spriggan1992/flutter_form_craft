@@ -61,8 +61,7 @@ base class FormCraftFieldManager {
     }
 
     // Create a new global key for state management
-    final globalKey =
-        controllers[key]?.globalKey ?? GlobalKey<FormCraftTextFieldState>();
+    final globalKey = controllers[key]?.globalKey ?? GlobalKey<FormCraftTextFieldState>();
 
     // Create a new FormCraftTextField controller
     final formController = FormController(
@@ -97,7 +96,7 @@ base class FormCraftFieldManager {
     // Call the private method to reassign the input value for the specified field
     controllers[key]!.controller.text = value;
     if (isRevalidate) {
-      controllers[key]!.globalKey.currentState!.validate();
+      controllers[key]!.globalKey.currentState?.validate();
     }
   }
 
@@ -167,11 +166,18 @@ base class FormCraftFieldManager {
   }) {
     _checkIfKeyExist(key);
 
+    final state = controllers[key]!.globalKey.currentState;
+    if (state == null) {
+      throw StateError(
+        'Cannot set error message for key $key because the field is not mounted yet or already disposed.',
+      );
+    }
+
     // Call the private method to assign a custom error message for the specified field
-    controllers[key]!.globalKey.currentState!._assignCustomError(
-          errorMessage,
-          isRedrawState,
-        );
+    state._assignCustomError(
+      errorMessage,
+      isRedrawState,
+    );
   }
 
   /// Disposes of all resources and clears the field and global key maps.
@@ -185,15 +191,15 @@ base class FormCraftFieldManager {
   }
 
   void disposeSpecificTextField(String key) {
-    controllers.clear();
-    controllers[key]?.focusNode.dispose();
-    controllers[key]?.controller.dispose();
+    final controller = controllers.remove(key);
+    controller?.focusNode.dispose();
+    controller?.controller.dispose();
   }
 
   // Checks if a field with the given key exists in the internal map.
   void _checkIfKeyExist(String key) {
     if (!controllers.keys.contains(key)) {
-      throw 'The key $key does not exist';
+      throw ArgumentError('The key $key does not exist');
     }
   }
 }
