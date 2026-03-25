@@ -30,12 +30,32 @@ base class FormCraftValidatorManager {
     return validate.every((element) => element);
   }
 
+  FormCraftValidationResult validateDetailed() {
+    final errorsByField = <String, String?>{};
+    String? firstInvalidKey;
+
+    _manager.controllers.forEach((key, controller) {
+      final state = controller.globalKey.currentState;
+      final isValid = state == null ? _isUnmountedFieldValid : state.validate();
+      final error = state?._errorMessage ?? controller.errorMessage;
+      errorsByField[key] = error;
+
+      if (!isValid && firstInvalidKey == null) {
+        firstInvalidKey = key;
+      }
+    });
+
+    return FormCraftValidationResult(
+      isValid: firstInvalidKey == null,
+      errorsByField: errorsByField,
+      firstInvalidKey: firstInvalidKey,
+    );
+  }
+
   /// Sets the validation type for all FormCraftTextField widgets.
   ///
   /// The [type] is the validation type to be set for all fields.
   void setValidationType(FormCraftValidationType type) {
-    _manager.controllers.forEach((_, controller) {
-      controller.globalKey.currentState?._setValidationType(type);
-    });
+    _manager.setValidationType(type);
   }
 }

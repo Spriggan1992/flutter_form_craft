@@ -8,6 +8,7 @@ class PersistentMask {
   final TextStyle? inputTextStyle;
   final FormCraftValidator? validator;
   final MaskType maskType;
+  final String? fixedPrefix;
 
   const PersistentMask._({
     required this.maskPattern,
@@ -15,12 +16,14 @@ class PersistentMask {
     this.maskTextStyle,
     this.inputTextStyle,
     this.validator,
+    this.fixedPrefix,
   });
 
   factory PersistentMask.phone({
     required String maskPattern,
     TextStyle? maskTextStyle,
     TextStyle? inputTextStyle,
+    String fixedPrefix = '+7 ',
     final String message = 'Invalid value',
     MaskType maskType = MaskType.phone,
   }) =>
@@ -29,6 +32,7 @@ class PersistentMask {
         maskType: maskType,
         maskTextStyle: maskTextStyle,
         inputTextStyle: inputTextStyle,
+        fixedPrefix: fixedPrefix,
         validator: FormCraftValidator.custom(
           message: message,
           predicate: (input) {
@@ -49,6 +53,7 @@ class PersistentMask {
       maskTextStyle: maskTextStyle,
       inputTextStyle: inputTextStyle,
       maskType: MaskType.custom,
+      fixedPrefix: null,
       validator: FormCraftValidator.custom(
           message: message,
           predicate: (input) {

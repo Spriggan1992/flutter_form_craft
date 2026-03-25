@@ -14,6 +14,8 @@ import 'validation/validators/form_craft_validator.dart';
 import 'masks/persistent_mask.dart';
 
 part 'text_field/form_craft_text_field.dart';
+part 'text_field/form_craft_field.dart';
+part 'text_field/form_craft_password_field.dart';
 part 'text_field/form_craft_field_manager.dart';
 part 'validation/form_craft_validator_manager.dart';
 part 'text_field/form_controller.dart';
@@ -34,8 +36,13 @@ class FormCraft {
     bool isPersistState = true,
     List<String> preRegisteredFields = const [],
     bool isUnmountedFieldValid = true,
+    FormCraftValidationType validationType = FormCraftValidationType.onSubmit,
   }) {
-    _fieldManager = FormCraftFieldManager(isPersistState, preRegisteredFields);
+    _fieldManager = FormCraftFieldManager(
+      isPersistState,
+      preRegisteredFields,
+      validationType,
+    );
     _validatorManager = FormCraftValidatorManager(
       _fieldManager,
       isUnmountedFieldValid: isUnmountedFieldValid,
@@ -76,6 +83,22 @@ class FormCraft {
     return _validatorManager.validate();
   }
 
+  /// Validates all fields and returns detailed per-field result.
+  FormCraftValidationResult validateDetailed() {
+    return _validatorManager.validateDetailed();
+  }
+
+  /// Validates a single field by key.
+  bool validateField(
+    String key, {
+    bool isUnmountedFieldValid = true,
+  }) {
+    return _fieldManager.validateField(
+      key,
+      isUnmountedFieldValid: isUnmountedFieldValid,
+    );
+  }
+
   /// Reassigns the input value for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.
@@ -87,6 +110,82 @@ class FormCraft {
     bool isRevalidate = false,
   }) {
     _fieldManager.reassignInputValue(key, value, isRevalidate);
+  }
+
+  /// Sets a single field value.
+  void setValue(
+    String key,
+    String value, {
+    bool isRevalidate = false,
+  }) {
+    _fieldManager.reassignInputValue(key, value, isRevalidate);
+  }
+
+  /// Sets multiple field values at once.
+  void setValues(
+    Map<String, String> values, {
+    bool isRevalidate = false,
+    bool ignoreMissingKeys = false,
+  }) {
+    _fieldManager.setValues(
+      values,
+      isRevalidate: isRevalidate,
+      ignoreMissingKeys: ignoreMissingKeys,
+    );
+  }
+
+  /// Returns a field value by key.
+  String getValue(String key) {
+    return _fieldManager.getFieldValue(key);
+  }
+
+  /// Clears a single field value and error.
+  void clearField(String key, {bool isRevalidate = false}) {
+    _fieldManager.clearField(key, isRevalidate: isRevalidate);
+  }
+
+  /// Clears all currently registered field values and errors.
+  void clearForm({bool isRevalidate = false}) {
+    _fieldManager.clearValues(
+      _fieldManager.controllers.keys,
+      isRevalidate: isRevalidate,
+    );
+  }
+
+  /// Returns the [FormController] for key and creates it if absent.
+  FormController registerField(String key) {
+    return _fieldManager.registerField(key);
+  }
+
+  /// Returns the [FormController] for key and creates it if absent.
+  FormController getController(String key) {
+    return _fieldManager.getFormController(key);
+  }
+
+  /// Shortcut to build a default [FormCraftTextField] without custom builder.
+  Widget buildField({
+    required String key,
+    required Function(String value) onChanged,
+    List<FormCraftValidator>? validators,
+    String? customErrorMessage,
+    String? initialValue,
+    InputDecoration Function(String? errorMessage)? decorationBuilder,
+    PersistentMask? mask,
+    bool stickyCustomError = false,
+  }) {
+    return buildTextField(
+      key,
+      (controller) => FormCraftTextField(
+        formController: controller,
+        onChanged: onChanged,
+        validators: validators,
+        customErrorMessage: customErrorMessage,
+        initialValue: initialValue,
+        decorationBuilder: decorationBuilder,
+        mask: mask,
+        stickyCustomError: stickyCustomError,
+      ),
+    );
   }
 
   GlobalKey getGlobalKey(String key) {
@@ -105,6 +204,16 @@ class FormCraft {
   /// Returns a map of field keys to their corresponding input values.
   Map<String, String> submitForm() {
     return _fieldManager.submitForm();
+  }
+
+  /// Returns all field errors by key.
+  Map<String, String?> getErrors() {
+    return _fieldManager.getAllFieldErrors();
+  }
+
+  /// Returns a field error by key.
+  String? getError(String key) {
+    return _fieldManager.getFieldError(key);
   }
 
   /// Refreshes the state of all FormCraftTextField widgets.
@@ -148,4 +257,16 @@ class FormCraft {
   void dispose() {
     _fieldManager.dispose();
   }
+}
+
+class FormCraftValidationResult {
+  final bool isValid;
+  final Map<String, String?> errorsByField;
+  final String? firstInvalidKey;
+
+  const FormCraftValidationResult({
+    required this.isValid,
+    required this.errorsByField,
+    required this.firstInvalidKey,
+  });
 }

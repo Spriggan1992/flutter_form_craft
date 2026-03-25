@@ -16,6 +16,9 @@ base class FormController {
   /// A flag that determines whether to persist the state of the FormCraftTextField widget.
   final bool isPersistState;
 
+  /// Validation mode for this field.
+  FormCraftValidationType validationType;
+
 // The initial value of the FormCraftTextField widget.
   String? get initialValue => _initialValue;
 
@@ -35,6 +38,7 @@ base class FormController {
     required this.globalKey,
     required this.focusNode,
     required this.isPersistState,
+    this.validationType = FormCraftValidationType.onSubmit,
   });
 
   void setController(TextEditingController controller) {

@@ -196,15 +196,15 @@ void checkMask(String mask) {
 String _getThousandSeparator(
   ThousandSeparator thousandSeparator,
 ) {
-  if (thousandSeparator == ThousandSeparator.Comma) {
+  if (thousandSeparator == ThousandSeparator.comma) {
     return ',';
   }
-  if (thousandSeparator == ThousandSeparator.SpaceAndCommaMantissa ||
-      thousandSeparator == ThousandSeparator.SpaceAndPeriodMantissa ||
-      thousandSeparator == ThousandSeparator.Space) {
+    if (thousandSeparator == ThousandSeparator.spaceAndCommaMantissa ||
+      thousandSeparator == ThousandSeparator.spaceAndPeriodMantissa ||
+      thousandSeparator == ThousandSeparator.space) {
     return ' ';
   }
-  if (thousandSeparator == ThousandSeparator.Period) {
+  if (thousandSeparator == ThousandSeparator.period) {
     return '.';
   }
   return '';
@@ -217,11 +217,11 @@ String _getMantissaSeparator(
   if (mantissaLength < 1) {
     return '';
   }
-  if (thousandSeparator == ThousandSeparator.Comma) {
+  if (thousandSeparator == ThousandSeparator.comma) {
     return '.';
   }
-  if (thousandSeparator == ThousandSeparator.Period ||
-      thousandSeparator == ThousandSeparator.SpaceAndCommaMantissa) {
+    if (thousandSeparator == ThousandSeparator.period ||
+      thousandSeparator == ThousandSeparator.spaceAndCommaMantissa) {
     return ',';
   }
   return '.';
@@ -249,27 +249,27 @@ String? _detectFractionSeparator(String value) {
 
 ShorteningPolicy _detectShorteningPolicyByStrLength(String evenPart) {
   if (evenPart.length > 3 && evenPart.length < 7) {
-    return ShorteningPolicy.RoundToThousands;
+    return ShorteningPolicy.roundToThousands;
   }
   if (evenPart.length > 6 && evenPart.length < 10) {
-    return ShorteningPolicy.RoundToMillions;
+    return ShorteningPolicy.roundToMillions;
   }
   if (evenPart.length > 9 && evenPart.length < 13) {
-    return ShorteningPolicy.RoundToBillions;
+    return ShorteningPolicy.roundToBillions;
   }
   if (evenPart.length > 12) {
-    return ShorteningPolicy.RoundToTrillions;
+    return ShorteningPolicy.roundToTrillions;
   }
 
-  return ShorteningPolicy.NoShortening;
+  return ShorteningPolicy.noShortening;
 }
 
 /// [isRawValue] pass true if you
 String toCurrencyString(
   String value, {
   int mantissaLength = 2,
-  ThousandSeparator thousandSeparator = ThousandSeparator.Comma,
-  ShorteningPolicy shorteningPolicy = ShorteningPolicy.NoShortening,
+  ThousandSeparator thousandSeparator = ThousandSeparator.comma,
+  ShorteningPolicy shorteningPolicy = ShorteningPolicy.noShortening,
   String leadingSymbol = '',
   String trailingSymbol = '',
   bool useSymbolPadding = false,
@@ -346,27 +346,27 @@ String toCurrencyString(
 
   int skipEvenNumbers = 0;
   String shorteningName = '';
-  if (shorteningPolicy != ShorteningPolicy.NoShortening) {
+  if (shorteningPolicy != ShorteningPolicy.noShortening) {
     switch (shorteningPolicy) {
-      case ShorteningPolicy.NoShortening:
+      case ShorteningPolicy.noShortening:
         break;
-      case ShorteningPolicy.RoundToThousands:
+      case ShorteningPolicy.roundToThousands:
         skipEvenNumbers = 3;
         shorteningName = 'K';
         break;
-      case ShorteningPolicy.RoundToMillions:
+      case ShorteningPolicy.roundToMillions:
         skipEvenNumbers = 6;
         shorteningName = 'M';
         break;
-      case ShorteningPolicy.RoundToBillions:
+      case ShorteningPolicy.roundToBillions:
         skipEvenNumbers = 9;
         shorteningName = 'B';
         break;
-      case ShorteningPolicy.RoundToTrillions:
+      case ShorteningPolicy.roundToTrillions:
         skipEvenNumbers = 12;
         shorteningName = 'T';
         break;
-      case ShorteningPolicy.Automatic:
+      case ShorteningPolicy.automatic:
         // find out what shortening to use base on the length of the string
         final policy = _detectShorteningPolicyByStrLength(evenPart);
         return toCurrencyString(
@@ -500,20 +500,20 @@ bool isDigit(
 
 enum ShorteningPolicy {
   /// displays a value of 1234456789.34 as 1,234,456,789.34
-  NoShortening,
+  noShortening,
 
   /// displays a value of 1234456789.34 as 1,234,456K
-  RoundToThousands,
+  roundToThousands,
 
   /// displays a value of 1234456789.34 as 1,234M
-  RoundToMillions,
+  roundToMillions,
 
   /// displays a value of 1234456789.34 as 1B
-  RoundToBillions,
-  RoundToTrillions,
+  roundToBillions,
+  roundToTrillions,
 
   /// uses K, M, B, or T depending on how big the numeric value is
-  Automatic
+  automatic
 }
 
 /// [Comma] means this format 1,000,000.00
@@ -523,12 +523,12 @@ enum ShorteningPolicy {
 /// [SpaceAndPeriodMantissa] 1 000 000.00
 /// [SpaceAndCommaMantissa] 1 000 000,00
 enum ThousandSeparator {
-  Comma,
-  Space,
-  Period,
-  None,
-  SpaceAndPeriodMantissa,
-  SpaceAndCommaMantissa,
+  comma,
+  space,
+  period,
+  none,
+  spaceAndPeriodMantissa,
+  spaceAndCommaMantissa,
 }
 
 const allFiatCurrencies = <String>[

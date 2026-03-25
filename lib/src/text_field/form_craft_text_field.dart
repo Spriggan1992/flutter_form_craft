@@ -219,7 +219,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
               ).maskedValue,
             MaskType.phone => MaskedPhoneInputFormatter(
                 widget.mask!.maskPattern,
-                fixedPrefix: '+7',
+                fixedPrefix: widget.mask!.fixedPrefix ?? '+7 ',
                 initialValue: value,
               ).maskedValue,
           };
@@ -229,6 +229,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
       },
     );
     _errorMessage = widget.formController.errorMessage;
+    _validateType = widget.formController.validationType;
     super.initState();
   }
 
@@ -239,6 +240,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     _focusNode = widget.formController.focusNode;
     _controller = widget.formController.controller;
     _errorMessage = widget.formController.errorMessage;
+    _validateType = widget.formController.validationType;
     super.didUpdateWidget(oldWidget);
   }
 
@@ -247,6 +249,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
     _focusNode = widget.formController.focusNode;
     _controller = widget.formController.controller;
     _errorMessage = widget.formController.errorMessage;
+    _validateType = widget.formController.validationType;
     super.didChangeDependencies();
   }
 
@@ -259,6 +262,7 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
   }
 
   void _setValidationType(FormCraftValidationType type) {
+    widget.formController.validationType = type;
     setState(() {
       _validateType = type;
     });
@@ -369,7 +373,8 @@ class FormCraftTextFieldState extends State<FormCraftTextField> {
           switch (widget.mask!.maskType) {
             MaskType.custom => MaskedInputFormatter(widget.mask!.maskPattern),
             MaskType.phone => MaskedPhoneInputFormatter(widget.mask!.maskPattern,
-                fixedPrefix: '+7 ', initialValue: widget.initialValue ?? ''),
+                fixedPrefix: widget.mask!.fixedPrefix ?? '+7 ',
+                initialValue: widget.initialValue ?? ''),
           },
         ...widget.inputFormatters ?? []
       ],

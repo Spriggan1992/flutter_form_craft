@@ -34,14 +34,8 @@ class MaskedPhoneInputFormatter extends TextInputFormatter {
 
   String _removeSeparators(String text) {
     String result = text;
-    for (var i = 0; i < _separators.length; i++) {
-      if ((i > 3)) {
-        if (!result.contains(_separators[7])) {
-          result = result.replaceAll(_separators[i], '');
-        }
-      } else {
-        result = result.replaceFirst(_separators[i], '');
-      }
+    for (final separator in _separators.toSet()) {
+      result = result.replaceAll(separator, '');
     }
 
     return result;

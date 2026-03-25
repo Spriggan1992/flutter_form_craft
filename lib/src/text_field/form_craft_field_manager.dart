@@ -4,6 +4,7 @@ part of '../form_craft.dart';
 base class FormCraftFieldManager {
   /// A flag that determines whether to persist the state of the FormCraftTextField widgets.
   late final bool _isPersistState;
+  FormCraftValidationType _validationType = FormCraftValidationType.onSubmit;
 
   /// A map that stores the FormCraftTextField controllers.
   ///
@@ -15,19 +16,36 @@ base class FormCraftFieldManager {
   FormCraftFieldManager(
     bool isPersistState, [
     List<String> preRegisteredFields = const [],
+    FormCraftValidationType validationType = FormCraftValidationType.onSubmit,
   ]) {
     _isPersistState = isPersistState;
+    _validationType = validationType;
     if (preRegisteredFields.isNotEmpty) {
       for (var key in preRegisteredFields) {
-        addFormController(
-            key,
-            FormController(
-              focusNode: FocusNode(),
-              globalKey: GlobalKey<FormCraftTextFieldState>(),
-              isPersistState: _isPersistState,
-            ).._controller = TextEditingController());
+        registerField(key);
       }
     }
+  }
+
+  FormController registerField(String key) {
+    final existing = controllers[key];
+    if (existing != null) {
+      return existing;
+    }
+
+    final formController = FormController(
+      focusNode: FocusNode(),
+      globalKey: GlobalKey<FormCraftTextFieldState>(),
+      isPersistState: _isPersistState,
+      validationType: _validationType,
+    ).._controller = TextEditingController();
+
+    controllers[key] = formController;
+    return formController;
+  }
+
+  FormController getFormController(String key) {
+    return registerField(key);
   }
 
   /// Adds a FormCraftTextField controller to the internal map.
@@ -55,30 +73,8 @@ base class FormCraftFieldManager {
       FormController formController,
     ) textField,
   ) {
-    final isContainKey = controllers.keys.contains(key);
-    if (isContainKey) {
-      return textField(controllers[key]!);
-    }
-
-    // Create a new global key for state management
-    final globalKey = controllers[key]?.globalKey ?? GlobalKey<FormCraftTextFieldState>();
-
-    // Create a new FormCraftTextField controller
-    final formController = FormController(
-      focusNode: FocusNode(),
-      globalKey: globalKey,
-      isPersistState: _isPersistState,
-    ).._controller = TextEditingController();
-
-    // Create the FormCraftTextField widget using the provided function
-    var textFieldWidget = textField(formController);
-
-    // Add the new widget to the internal map
-    // _fields[key] = textFieldWidget;
-    controllers[key] = formController;
-
-    // Return the created FormCraftTextField widget
-    return textFieldWidget;
+    final controller = registerField(key);
+    return textField(controller);
   }
 
   /// Reassigns the input value for a specific field.
@@ -98,6 +94,34 @@ base class FormCraftFieldManager {
     if (isRevalidate) {
       controllers[key]!.globalKey.currentState?.validate();
     }
+  }
+
+  String getFieldValue(String key) {
+    _checkIfKeyExist(key);
+    return controllers[key]!.controller.text;
+  }
+
+  String? getFieldError(String key) {
+    _checkIfKeyExist(key);
+    return controllers[key]!.globalKey.currentState?._errorMessage ??
+        controllers[key]!.errorMessage;
+  }
+
+  Map<String, String?> getAllFieldErrors() {
+    final errors = <String, String?>{};
+    controllers.forEach((key, _) {
+      errors[key] = getFieldError(key);
+    });
+    return errors;
+  }
+
+  bool validateField(
+    String key, {
+    bool isUnmountedFieldValid = true,
+  }) {
+    _checkIfKeyExist(key);
+    final state = controllers[key]!.globalKey.currentState;
+    return state == null ? isUnmountedFieldValid : state.validate();
   }
 
   /// Gets the [GlobalKey] for a specific field.
@@ -154,6 +178,39 @@ base class FormCraftFieldManager {
     // });
   }
 
+  void clearField(String key, {bool isRevalidate = false}) {
+    _checkIfKeyExist(key);
+
+    final controller = controllers[key]!;
+    controller.controller.clear();
+    controller.globalKey.currentState?._reassignError(null);
+    controller._setErrorMessage(null);
+
+    if (isRevalidate) {
+      controller.globalKey.currentState?.validate();
+    }
+  }
+
+  void setValues(
+    Map<String, String> values, {
+    bool isRevalidate = false,
+    bool ignoreMissingKeys = false,
+  }) {
+    values.forEach((key, value) {
+      if (!ignoreMissingKeys) {
+        reassignInputValue(key, value, isRevalidate);
+      } else if (controllers.containsKey(key)) {
+        reassignInputValue(key, value, isRevalidate);
+      }
+    });
+  }
+
+  void clearValues(Iterable<String> keys, {bool isRevalidate = false}) {
+    for (final key in keys) {
+      clearField(key, isRevalidate: isRevalidate);
+    }
+  }
+
   /// Sets a custom error message for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.
@@ -194,6 +251,14 @@ base class FormCraftFieldManager {
     final controller = controllers.remove(key);
     controller?.focusNode.dispose();
     controller?.controller.dispose();
+  }
+
+  void setValidationType(FormCraftValidationType type) {
+    _validationType = type;
+    controllers.forEach((_, controller) {
+      controller.validationType = type;
+      controller.globalKey.currentState?._setValidationType(type);
+    });
   }
 
   // Checks if a field with the given key exists in the internal map.
