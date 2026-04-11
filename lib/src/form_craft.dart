@@ -144,6 +144,13 @@ class FormCraft {
     _fieldManager.clearField(key, isRevalidate: isRevalidate);
   }
 
+  /// Resets validation errors for all fields without clearing their values.
+  ///
+  /// Fields listed in [ignore] are skipped and keep their current error state.
+  void resetValidation({List<String> ignore = const []}) {
+    _fieldManager.resetValidation(ignore: ignore);
+  }
+
   /// Clears all currently registered field values and errors.
   void clearForm({bool isRevalidate = false}) {
     _fieldManager.clearValues(

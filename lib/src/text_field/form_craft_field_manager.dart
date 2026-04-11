@@ -211,6 +211,17 @@ base class FormCraftFieldManager {
     }
   }
 
+  /// Resets validation errors for all fields, preserving field values.
+  ///
+  /// Fields listed in [ignore] are skipped and keep their current error state.
+  void resetValidation({List<String> ignore = const []}) {
+    controllers.forEach((key, controller) {
+      if (ignore.contains(key)) return;
+      controller._setErrorMessage(null);
+      controller.globalKey.currentState?._reassignError(null);
+    });
+  }
+
   /// Sets a custom error message for a specific field.
   ///
   /// The [key] parameter is required and must be the key of an existing field.
