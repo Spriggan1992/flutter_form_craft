@@ -7,6 +7,8 @@ import 'package:flutter_form_craft/src/masks/mask_formatter.dart';
 import 'package:flutter_form_craft/src/masks/mask_type.dart';
 import 'package:flutter_form_craft/src/masks/masked_phone_input_formatter.dart';
 
+import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'validation/form_craft_validation_type.dart';
@@ -20,6 +22,8 @@ part 'text_field/form_craft_field_manager.dart';
 part 'validation/form_craft_validator_manager.dart';
 part 'text_field/form_controller.dart';
 part 'masks/form_craft_mask_text_editing_controller.dart';
+part 'cache/form_craft_cache_storage.dart';
+part 'cache/form_craft_cache_controller.dart';
 
 /// A utility class that helps manage and interact with a collection of FormCraftTextField widgets.
 class FormCraft {
@@ -58,6 +62,42 @@ class FormCraft {
     FormCraftValidatorManager validatorManager,
   )   : _fieldManager = fieldManager,
         _validatorManager = validatorManager;
+
+  /// Create a new instance of FormCraft that automatically persists field
+  /// values to [storage] and restores them the next time a form with the
+  /// same [cacheKey] is built (e.g. the user closed the app or navigated
+  /// away mid-input).
+  ///
+  /// Every field change is debounced by [cacheDebounce] before being written
+  /// to storage, so typing doesn't trigger a write per keystroke.
+  ///
+  /// Call [clearCache] once the form has been submitted successfully so the
+  /// draft doesn't reappear next time.
+  FormCraft.withCache({
+    required String cacheKey,
+    required FormCraftCacheStorage storage,
+    Duration cacheDebounce = const Duration(milliseconds: 400),
+    bool isPersistState = true,
+    List<String> preRegisteredFields = const [],
+    bool isUnmountedFieldValid = true,
+    FormCraftValidationType validationType = FormCraftValidationType.onSubmit,
+  }) {
+    _fieldManager = FormCraftFieldManager(
+      isPersistState,
+      preRegisteredFields,
+      validationType,
+      FormCraftCacheController(
+        key: cacheKey,
+        storage: storage,
+        debounce: cacheDebounce,
+      ),
+    );
+    _validatorManager = FormCraftValidatorManager(
+      _fieldManager,
+      isUnmountedFieldValid: isUnmountedFieldValid,
+    );
+    unawaited(_fieldManager.restoreFromCache());
+  }
 
   /// Builds a FormCraftTextField widget with the specified key and configuration.
   ///
@@ -259,6 +299,11 @@ class FormCraft {
   void disposeField(String key) {
     _fieldManager.disposeSpecificTextField(key);
   }
+
+  /// Deletes the persisted draft for this form, if [FormCraft.withCache] was
+  /// used to create it. Call this after a successful submit so the draft
+  /// doesn't reappear the next time the form is opened. No-op otherwise.
+  Future<void> clearCache() => _fieldManager.clearCache();
 
   /// Disposes of all resources and clears the field and global key maps.
   void dispose() {

@@ -13,11 +13,19 @@ base class FormCraftFieldManager {
   /// The [FormController] class is responsible for managing the state of the FormCraftTextField widget.
   final Map<String, FormController> controllers = {};
 
+  /// Set only when this manager was created via [FormCraft.withCache].
+  final FormCraftCacheController? _cache;
+
+  /// Guards against the cache listener re-scheduling a save while a cached
+  /// value is being applied back onto a controller.
+  bool _isApplyingCache = false;
+
   FormCraftFieldManager(
     bool isPersistState, [
     List<String> preRegisteredFields = const [],
     FormCraftValidationType validationType = FormCraftValidationType.onSubmit,
-  ]) {
+    FormCraftCacheController? cache,
+  ]) : _cache = cache {
     _isPersistState = isPersistState;
     _validationType = validationType;
     if (preRegisteredFields.isNotEmpty) {
@@ -41,7 +49,61 @@ base class FormCraftFieldManager {
     ).._controller = TextEditingController();
 
     controllers[key] = formController;
+
+    final cache = _cache;
+    if (cache != null) {
+      final cachedValue = cache.pendingRestoredValues?[key];
+      if (cachedValue != null) {
+        _applyCachedValue(formController, cachedValue);
+      }
+
+      formController.controller.addListener(() {
+        if (_isApplyingCache) return;
+        cache.scheduleSave(submitForm);
+      });
+    }
+
     return formController;
+  }
+
+  /// Sets a restored value on [formController] and marks it as already
+  /// initialized so [FormCraftTextField.initState] (which unconditionally
+  /// applies `initialValue ?? ''` the first time a field mounts) doesn't
+  /// clobber it when the widget mounts after the value was restored.
+  void _applyCachedValue(FormController formController, String value) {
+    _isApplyingCache = true;
+    formController._isInit = true;
+    formController.controller.text = value;
+    _isApplyingCache = false;
+  }
+
+  /// Loads values persisted under this form's cache key and applies them to
+  /// whichever fields are already registered. Values for fields that get
+  /// registered later (built after this call resolves) are still applied,
+  /// since [registerField] consults [FormCraftCacheController.pendingRestoredValues].
+  ///
+  /// No-op if this manager wasn't created via [FormCraft.withCache].
+  Future<void> restoreFromCache() async {
+    final cache = _cache;
+    if (cache == null) return;
+
+    final values = await cache.load();
+    if (values == null || values.isEmpty) return;
+
+    cache.pendingRestoredValues = values;
+
+    values.forEach((key, value) {
+      final controller = controllers[key];
+      if (controller != null) {
+        _applyCachedValue(controller, value);
+      }
+    });
+  }
+
+  /// Deletes the persisted draft for this form. No-op if this manager wasn't
+  /// created via [FormCraft.withCache].
+  Future<void> clearCache() async {
+    await _cache?.clear();
   }
 
   FormController getFormController(String key) {
@@ -250,6 +312,14 @@ base class FormCraftFieldManager {
 
   /// Disposes of all resources and clears the field and global key maps.
   void dispose() {
+    final cache = _cache;
+    if (cache != null) {
+      // Flush whatever hasn't been written yet so a debounce window that
+      // hasn't fired isn't lost when the user navigates away.
+      unawaited(cache.flush(submitForm));
+      cache.dispose();
+    }
+
     // Clear the internal maps to release resources
     controllers.forEach((key, formController) {
       formController.controller.dispose();

@@ -1,11 +1,28 @@
 library form_craft_test;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_craft/src/masks/persistent_mask.dart';
 import 'package:flutter_form_craft/src/form_craft.dart';
 import 'package:flutter_form_craft/src/validation/form_craft_validation_type.dart';
 import 'package:flutter_form_craft/src/validation/validators/form_craft_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _InMemoryCacheStorage implements FormCraftCacheStorage {
+  _InMemoryCacheStorage([Map<String, String>? seed]) : data = {...?seed};
+
+  final Map<String, String> data;
+
+  @override
+  Future<String?> read(String key) async => data[key];
+
+  @override
+  Future<void> write(String key, String value) async => data[key] = value;
+
+  @override
+  Future<void> delete(String key) async => data.remove(key);
+}
 
 void main() {
   group('FormCraft Integration Tests', () {
@@ -470,6 +487,152 @@ void main() {
 
       formCraft.setValue('password', '12345678');
       expect(formCraft.validateField('password'), true);
+    });
+  });
+
+  group('FormCraft.withCache', () {
+    testWidgets('debounces and persists field changes to storage', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage();
+      final formCraft = FormCraft.withCache(
+        cacheKey: 'draft',
+        storage: storage,
+        cacheDebounce: const Duration(milliseconds: 50),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+
+      // Debounce hasn't elapsed yet.
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(storage.data['draft'], isNull);
+
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(jsonDecode(storage.data['draft']!), {'name': 'Alex'});
+
+      formCraft.dispose();
+    });
+
+    testWidgets('FormCraft.withCache auto-restores without an explicit call', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage({
+        'draft': jsonEncode({'name': 'Cached Value'}),
+      });
+      final formCraft = FormCraft.withCache(cacheKey: 'draft', storage: storage);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(formCraft.getValue('name'), 'Cached Value');
+      expect(find.text('Cached Value'), findsOneWidget);
+
+      formCraft.dispose();
+    });
+
+    testWidgets('restores previously cached values into a fresh form', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage({
+        'draft': jsonEncode({'name': 'Cached Value'}),
+      });
+      // Built explicitly (rather than via FormCraft.withCache) so the test can
+      // await restoreFromCache() deterministically instead of racing the
+      // fire-and-forget call the constructor makes.
+      final cache = FormCraftCacheController(
+        key: 'draft',
+        storage: storage,
+        debounce: const Duration(milliseconds: 50),
+      );
+      final fieldManager = FormCraftFieldManager(
+        true,
+        const [],
+        FormCraftValidationType.onSubmit,
+        cache,
+      );
+      final validatorManager = FormCraftValidatorManager(fieldManager);
+      final formCraft = FormCraft.test(fieldManager, validatorManager);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await fieldManager.restoreFromCache();
+      await tester.pump();
+
+      expect(formCraft.getValue('name'), 'Cached Value');
+      expect(find.text('Cached Value'), findsOneWidget);
+
+      formCraft.dispose();
+    });
+
+    testWidgets('clearCache deletes the persisted draft', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage({
+        'draft': jsonEncode({'name': 'x'}),
+      });
+      final formCraft = FormCraft.withCache(cacheKey: 'draft', storage: storage);
+
+      await formCraft.clearCache();
+
+      expect(storage.data.containsKey('draft'), false);
+    });
+
+    testWidgets('dispose flushes a pending debounced save immediately', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage();
+      final formCraft = FormCraft.withCache(
+        cacheKey: 'draft',
+        storage: storage,
+        cacheDebounce: const Duration(seconds: 5),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump();
+
+      // Debounce (5s) hasn't fired yet.
+      expect(storage.data['draft'], isNull);
+
+      formCraft.dispose();
+      await tester.pump();
+
+      expect(jsonDecode(storage.data['draft']!), {'name': 'Alex'});
+    });
+
+    testWidgets('plain FormCraft() has no cache and clearCache is a no-op', (WidgetTester tester) async {
+      final formCraft = FormCraft();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump(const Duration(seconds: 1));
+
+      await formCraft.clearCache();
     });
   });
 }
