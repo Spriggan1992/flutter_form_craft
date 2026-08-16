@@ -314,9 +314,13 @@ base class FormCraftFieldManager {
   void dispose() {
     final cache = _cache;
     if (cache != null) {
-      // Flush whatever hasn't been written yet so a debounce window that
-      // hasn't fired isn't lost when the user navigates away.
-      unawaited(cache.flush(submitForm));
+      // Only flush if a debounced save is actually pending — otherwise this
+      // would resurrect a draft that was just deleted via clearCache() (e.g.
+      // right after a successful submit) by unconditionally re-writing the
+      // current field values on the way out.
+      if (cache.hasPendingSave) {
+        unawaited(cache.flush(submitForm));
+      }
       cache.dispose();
     }
 

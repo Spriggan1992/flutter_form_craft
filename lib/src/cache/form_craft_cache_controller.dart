@@ -14,6 +14,9 @@ base class FormCraftCacheController {
 
   Timer? _debounceTimer;
 
+  /// Whether a debounced write is currently scheduled and hasn't fired yet.
+  bool get hasPendingSave => _debounceTimer != null;
+
   FormCraftCacheController({
     required this.key,
     required this.storage,

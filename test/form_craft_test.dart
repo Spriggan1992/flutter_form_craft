@@ -590,6 +590,38 @@ void main() {
       expect(storage.data.containsKey('draft'), false);
     });
 
+    testWidgets('dispose after clearCache does not resurrect the draft', (WidgetTester tester) async {
+      final storage = _InMemoryCacheStorage();
+      final formCraft = FormCraft.withCache(
+        cacheKey: 'draft',
+        storage: storage,
+        cacheDebounce: const Duration(milliseconds: 50),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: formCraft.buildField(key: 'name', onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(storage.data['draft'], isNotNull);
+
+      // Simulates a successful submit: the draft is explicitly cleared...
+      await formCraft.clearCache();
+      expect(storage.data.containsKey('draft'), false);
+
+      // ...and nothing typed afterward, so disposing on navigation-away
+      // must not silently rewrite the just-cleared draft.
+      formCraft.dispose();
+      await tester.pump();
+
+      expect(storage.data.containsKey('draft'), false);
+    });
+
     testWidgets('dispose flushes a pending debounced save immediately', (WidgetTester tester) async {
       final storage = _InMemoryCacheStorage();
       final formCraft = FormCraft.withCache(
